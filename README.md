@@ -63,3 +63,59 @@ Designed for speed, simplicity, and minimal friction.
 - HTML/CSS (Popup UI)  
 
 ---
+
+## Incoming Features
+
+tabio is actively being developed. Planned and potential features include:
+
+### Session Management
+- Save and name tab sessions  
+- Reopen saved sessions later  
+- Auto-save last session on browser close  
+
+### Smart Formatting
+- Export as JSON (structured data)  
+- Custom templates (user-defined formats)  
+- Copy as rich text (for Notion, Slack, etc.)  
+
+### Deduplication & Cleaning
+- Remove duplicate URLs automatically  
+- Normalize tracking parameters (e.g., remove `?utm=`)  
+- Sort and group links  
+
+### Tab Organization
+- Group tabs by domain  
+- Restore tabs into groups  
+- Collapse/expand groups before export  
+
+### Controlled Tab Opening
+- Batch open tabs (e.g., 5 at a time)  
+- Delay between tab opens  
+- Limit max tabs per import  
+
+### Preview Before Opening
+- Show parsed links before opening  
+- Allow selecting/deselecting links  
+- Highlight invalid URLs  
+
+### Cross-Device Workflow
+- Sync sessions using browser storage  
+- Export/import via file (`.txt` / `.json`)  
+- Shareable session links  
+
+### Integrations
+- Copy directly to Notion-friendly format  
+- Export to Google Docs / Markdown editors  
+- Webhook/API for automation  
+
+### Power User Features
+- Keyboard shortcuts (export/import instantly)  
+- Command palette (quick actions)  
+- Right-click context menu support  
+
+### Analytics (Local Only)
+- Count tabs exported/imported  
+- Track most frequent domains  
+- Session stats (purely local, no external storage)  
+
+---
