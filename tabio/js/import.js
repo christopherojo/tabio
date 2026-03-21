@@ -19,7 +19,7 @@ const Import = (() => {
       try { new URL(clean); seen.add(clean); } catch {}
     };
 
-    // 1. Markdown [Title](url)
+    // 1. Markdown / Notion links [Title](url) — also handles "- [Title](url)"
     for (const m of text.matchAll(/\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g)) add(m[1]);
 
     // 2. Title: url  /  Title | url  (line-based)

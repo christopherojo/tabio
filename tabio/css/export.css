@@ -9,6 +9,103 @@
   margin-bottom: 8px;
 }
 
+/* Scope sub-pickers */
+.scope-sub {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.scope-sub[hidden] { display: none; }
+
+.scope-sub-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+
+.scope-sub-hint {
+  font-size: 11px;
+  color: var(--text-hint);
+  font-style: italic;
+}
+
+.group-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.group-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .1s;
+}
+.group-picker-item:hover { background: var(--surface-hover); }
+
+.group-picker-check {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.group-picker-item.checked .group-picker-check {
+  background: var(--google-blue);
+  border-color: var(--google-blue);
+}
+.group-picker-item.checked .group-picker-check::after {
+  content: '';
+  width: 7px; height: 4px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.group-color-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-picker-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-picker-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-hint);
+}
+
+/* Tab group colors */
+.group-color-grey   { background: #9aa0a6; }
+.group-color-blue   { background: #1a73e8; }
+.group-color-red    { background: #ea4335; }
+.group-color-yellow { background: #fbbc04; }
+.group-color-green  { background: #34a853; }
+.group-color-pink   { background: #f06292; }
+.group-color-purple { background: #7b1fa2; }
+.group-color-cyan   { background: #00acc1; }
+.group-color-orange { background: #ef6c00; }
+
 .tab-picker-wrap         { margin-bottom: 10px; }
 .tab-picker-wrap[hidden] { display: none; }
 

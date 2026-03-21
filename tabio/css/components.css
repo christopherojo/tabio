@@ -91,7 +91,7 @@
 }
 
 /* ── Scope buttons ──────────────────────────────────── */
-.scope-row  { display: flex; gap: 6px; margin-bottom: 10px; }
+.scope-row  { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
 
 .scope-btn {
   flex: 1;

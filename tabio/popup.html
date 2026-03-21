@@ -62,7 +62,24 @@
     <div class="scope-row">
       <button class="scope-btn active" id="scopeWindow">This Window</button>
       <button class="scope-btn" id="scopeAll">All Windows</button>
+      <button class="scope-btn" id="scopeTabGroup">Tab Groups</button>
+      <button class="scope-btn" id="scopeWindows">By Window</button>
       <button class="scope-btn" id="scopeSelected">Pick Tabs</button>
+    </div>
+
+    <!-- Scope sub-pickers (shown contextually) -->
+    <div class="scope-sub" id="scopeSubTabGroup" hidden>
+      <div class="scope-sub-label">Select tab groups to export:</div>
+      <div class="group-picker" id="tabGroupPicker">
+        <span class="scope-sub-hint">Loading tab groups…</span>
+      </div>
+    </div>
+
+    <div class="scope-sub" id="scopeSubWindows" hidden>
+      <div class="scope-sub-label">Select windows to export:</div>
+      <div class="group-picker" id="windowPicker">
+        <span class="scope-sub-hint">Loading windows…</span>
+      </div>
     </div>
 
     <!-- Format -->
