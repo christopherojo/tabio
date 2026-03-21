@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Tabio",
-  "version": "1.0.0",
-  "description": "Export tabs to text. Import text to tabs.",
-  "permissions": ["tabs", "windows", "clipboardWrite", "clipboardRead"],
+  "version": "2.0.0",
+  "description": "Export tabs to text. Import text to tabs. Save sessions. Clean links.",
+  "permissions": ["tabs", "windows", "clipboardWrite", "clipboardRead", "storage"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

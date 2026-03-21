@@ -1,79 +1,51 @@
 /* ─────────────────────────────────────────────────────────
-   layout.css  —  header, mode toggle, panels
+   layout.css  —  header, nav tabs, panels
 ───────────────────────────────────────────────────────── */
 
-/* Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 12px;
+  padding: 12px 16px 10px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.logo          { display: flex; align-items: center; gap: 8px; }
+.logo-icon     { width: 22px; height: 22px; flex-shrink: 0; }
+.logo-text     { font-size: 17px; font-weight: 800; letter-spacing: -.4px; }
 
-.logo-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.logo-text {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.4px;
-}
-
-/* Mode Toggle */
+/* Nav */
 .mode-toggle {
   display: flex;
-  gap: 4px;
-  padding: 12px 16px 0;
   border-bottom: 2px solid var(--border);
+  padding: 0 4px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.mode-toggle::-webkit-scrollbar { display: none; }
 
 .mode-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  font-size: 12.5px;
+  gap: 5px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  transition: color 0.15s, background 0.15s;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
   position: relative;
   bottom: -2px;
   border-bottom: 2px solid transparent;
+  flex-shrink: 0;
 }
 
-.mode-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.mode-btn:hover:not(.active) {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-}
-
-.mode-btn.active {
-  color: var(--google-blue);
-  border-bottom-color: var(--google-blue);
-}
+.mode-btn svg               { width: 13px; height: 13px; }
+.mode-btn:hover:not(.active){ color: var(--text-primary); background: var(--surface-hover); }
+.mode-btn.active            { color: var(--google-blue); border-bottom-color: var(--google-blue); }
 
 /* Panels */
-.panel {
-  padding: 14px 16px 16px;
-}
-
-.panel[hidden] {
-  display: none;
-}
+.panel          { padding: 12px 16px 14px; }
+.panel[hidden]  { display: none; }

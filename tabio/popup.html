@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tabio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/export.css">
   <link rel="stylesheet" href="css/import.css">
+  <link rel="stylesheet" href="css/sessions.css">
+  <link rel="stylesheet" href="css/analytics.css">
 </head>
 <body>
 
   <!-- ── Header ─────────────────────────────────────────── -->
   <header class="header">
     <div class="logo">
-      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none">
         <rect x="2" y="6" width="6" height="4" rx="1.5" fill="var(--google-blue)"/>
         <rect x="10" y="6" width="6" height="4" rx="1.5" fill="var(--google-red)"/>
         <rect x="18" y="6" width="4" height="4" rx="1.5" fill="var(--google-yellow)"/>
@@ -31,45 +33,62 @@
     <span class="tab-badge" id="tabCountBadge">— tabs</span>
   </header>
 
-  <!-- ── Mode Toggle ────────────────────────────────────── -->
-  <div class="mode-toggle" role="tablist">
-    <button class="mode-btn active" id="modeExport" role="tab" aria-selected="true">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/>
-        <polyline points="13 7 10 4 7 7"/>
-        <line x1="10" y1="4" x2="10" y2="13"/>
-      </svg>
-      Tabs → Text
+  <!-- ── Nav ────────────────────────────────────────────── -->
+  <nav class="mode-toggle" role="tablist">
+    <button class="mode-btn active" id="modeExport" role="tab" data-panel="panelExport">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="13 7 10 4 7 7"/><line x1="10" y1="4" x2="10" y2="13"/></svg>
+      Export
     </button>
-    <button class="mode-btn" id="modeImport" role="tab" aria-selected="false">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/>
-        <polyline points="7 9 10 12 13 9"/>
-        <line x1="10" y1="12" x2="10" y2="3"/>
-      </svg>
-      Text → Tabs
+    <button class="mode-btn" id="modeImport" role="tab" data-panel="panelImport">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="7 9 10 12 13 9"/><line x1="10" y1="12" x2="10" y2="3"/></svg>
+      Import
     </button>
-  </div>
+    <button class="mode-btn" id="modeSessions" role="tab" data-panel="panelSessions">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="6" y1="3" x2="6" y2="7"/><line x1="14" y1="3" x2="14" y2="7"/></svg>
+      Sessions
+    </button>
+    <button class="mode-btn" id="modeAnalytics" role="tab" data-panel="panelAnalytics">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="17" x2="2" y2="17"/><polyline points="5 10 5 17"/><polyline points="9 6 9 17"/><polyline points="13 13 13 17"/><polyline points="17 3 17 17"/></svg>
+      Stats
+    </button>
+  </nav>
 
-  <!-- ── Export Panel ───────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════
+       EXPORT PANEL
+  ════════════════════════════════════════════════════════ -->
   <section class="panel active" id="panelExport" role="tabpanel">
 
+    <!-- Scope -->
     <div class="scope-row">
       <button class="scope-btn active" id="scopeWindow">This Window</button>
       <button class="scope-btn" id="scopeAll">All Windows</button>
       <button class="scope-btn" id="scopeSelected">Pick Tabs</button>
     </div>
 
+    <!-- Format -->
     <div class="format-row">
       <span class="row-label">Format</span>
-      <div class="chip-group">
+      <div class="chip-group" id="formatChips">
         <button class="chip active" id="fmtUrl">URLs</button>
         <button class="chip" id="fmtMarkdown">Markdown</button>
-        <button class="chip" id="fmtTitled">Title + URL</button>
+        <button class="chip" id="fmtTitled">Title+URL</button>
+        <button class="chip" id="fmtJson">JSON</button>
+        <button class="chip" id="fmtNotion">Notion</button>
       </div>
     </div>
 
-    <!-- Tab picker (visible when scope = selected) -->
+    <!-- Cleaning options -->
+    <div class="clean-row">
+      <span class="row-label">Clean</span>
+      <div class="chip-group">
+        <button class="chip-toggle" id="cleanDedupe" title="Remove duplicate URLs">Dedupe</button>
+        <button class="chip-toggle" id="cleanUtm" title="Strip tracking params">Strip UTM</button>
+        <button class="chip-toggle" id="cleanSort" title="Sort alphabetically">Sort</button>
+        <button class="chip-toggle" id="cleanGroup" title="Group by domain">Group</button>
+      </div>
+    </div>
+
+    <!-- Tab picker -->
     <div class="tab-picker-wrap" id="tabPickerWrap" hidden>
       <div class="picker-header">
         <span class="picker-count" id="selectedCount">0 selected</span>
@@ -78,43 +97,62 @@
       <div class="tab-list" id="tabPickerList"></div>
     </div>
 
+    <!-- Output -->
     <div class="output-box" id="outputBox">
-      <span class="placeholder">Your tab links will appear here…</span>
+      <span class="placeholder">Click Generate to export your tabs…</span>
     </div>
 
+    <!-- Actions -->
     <div class="btn-row">
       <button class="btn btn-primary" id="btnGenerate">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 12 16 12 13 19 7 1 4 12 0 12"/>
-        </svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 16 12 13 19 7 1 4 12 0 12"/></svg>
         Generate
       </button>
       <button class="btn btn-secondary" id="btnCopy">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="8" y="8" width="11" height="11" rx="2"/>
-          <path d="M4 12H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"/>
-        </svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M4 12H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"/></svg>
         Copy
+      </button>
+      <button class="btn btn-secondary" id="btnDownload">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="7 9 10 12 13 9"/><line x1="10" y1="12" x2="10" y2="3"/></svg>
+        Save
+      </button>
+      <button class="btn btn-ghost" id="btnSaveSession">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><polyline points="13 3 13 7 17 7"/><line x1="7" y1="11" x2="13" y2="11"/><line x1="7" y1="15" x2="13" y2="15"/></svg>
+        Session
       </button>
     </div>
   </section>
 
-  <!-- ── Import Panel ───────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════
+       IMPORT PANEL
+  ════════════════════════════════════════════════════════ -->
   <section class="panel" id="panelImport" role="tabpanel" hidden>
 
-    <textarea
-      class="import-textarea"
-      id="importTextarea"
-      placeholder="Paste URLs, Markdown links, or Title: URL text…&#10;&#10;Supports:&#10;• https://plain-url.com&#10;• [Title](https://url.com)&#10;• Title: https://url.com"
-    ></textarea>
+    <textarea class="import-textarea" id="importTextarea"
+      placeholder="Paste URLs, Markdown links, or Title: URL text…&#10;&#10;• https://example.com&#10;• [Title](https://url.com)&#10;• Title: https://url.com"></textarea>
 
-    <div class="char-count" id="charCount">0 characters</div>
+    <div class="import-meta-row">
+      <span class="char-count" id="charCount">0 chars</span>
+      <span class="url-count-badge" id="urlCountBadge" hidden>0 URLs</span>
+      <div class="import-file-wrap">
+        <button class="text-btn" id="btnLoadFile">↑ Load file</button>
+        <input type="file" id="fileInput" accept=".txt,.json,.md" hidden>
+      </div>
+    </div>
 
+    <!-- Parsed preview with selectable URLs -->
     <div class="parsed-preview" id="parsedPreview" hidden>
-      <span class="parsed-label" id="parsedLabel">0 URLs found</span>
+      <div class="parsed-header">
+        <span class="parsed-label" id="parsedLabel">0 URLs</span>
+        <div class="parsed-actions">
+          <button class="text-btn" id="selectAllUrls">All</button>
+          <button class="text-btn" id="deselectAllUrls">None</button>
+        </div>
+      </div>
       <div class="parsed-url-list" id="parsedUrlList"></div>
     </div>
 
+    <!-- Options -->
     <div class="options-row">
       <label class="toggle-wrap">
         <div class="toggle" id="toggleNewWindow"></div>
@@ -122,8 +160,25 @@
       </label>
       <label class="toggle-wrap">
         <div class="toggle" id="toggleCloseExisting"></div>
-        <span class="toggle-label">Close current tabs</span>
+        <span class="toggle-label">Close existing</span>
       </label>
+    </div>
+
+    <!-- Batch options -->
+    <div class="batch-row">
+      <span class="row-label">Batch</span>
+      <div class="batch-controls">
+        <label class="batch-label">
+          <span>Open</span>
+          <input class="batch-input" type="number" id="batchSize" value="0" min="0" max="100">
+          <span>at a time</span>
+        </label>
+        <label class="batch-label">
+          <span>Delay</span>
+          <input class="batch-input" type="number" id="batchDelay" value="0" min="0" max="5000" step="100">
+          <span>ms</span>
+        </label>
+      </div>
     </div>
 
     <div class="status-bar" id="statusBar" hidden>
@@ -133,29 +188,114 @@
 
     <div class="btn-row">
       <button class="btn btn-primary" id="btnOpenTabs">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>
-          <polyline points="12 2 18 2 18 8"/>
-          <line x1="8" y1="12" x2="18" y2="2"/>
-        </svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><polyline points="12 2 18 2 18 8"/><line x1="8" y1="12" x2="18" y2="2"/></svg>
         Open Tabs
       </button>
       <button class="btn btn-ghost" id="btnClear">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 19 6"/>
-          <path d="M16 6l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/>
-          <path d="M8 6V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/>
-        </svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 19 6"/><path d="M16 6l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/><path d="M8 6V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
         Clear
       </button>
     </div>
   </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SESSIONS PANEL
+  ════════════════════════════════════════════════════════ -->
+  <section class="panel" id="panelSessions" role="tabpanel" hidden>
+
+    <div class="sessions-toolbar">
+      <button class="btn btn-primary btn-sm" id="btnSaveNow">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><polyline points="13 3 13 7 17 7"/></svg>
+        Save current tabs
+      </button>
+      <div class="sessions-filter">
+        <input class="search-input" type="text" id="sessionSearch" placeholder="Search sessions…">
+      </div>
+    </div>
+
+    <!-- Save dialog -->
+    <div class="save-dialog" id="saveDialog" hidden>
+      <input class="save-name-input" type="text" id="sessionNameInput" placeholder="Session name (e.g. Research, Work)">
+      <div class="save-dialog-btns">
+        <button class="btn btn-primary btn-sm" id="btnConfirmSave">Save</button>
+        <button class="btn btn-ghost btn-sm" id="btnCancelSave">Cancel</button>
+      </div>
+    </div>
+
+    <div class="session-list" id="sessionList">
+      <div class="empty-state" id="sessionsEmpty">
+        <svg viewBox="0 0 48 48" fill="none" stroke="var(--border)" stroke-width="2"><rect x="8" y="10" width="32" height="28" rx="4"/><line x1="8" y1="18" x2="40" y2="18"/><line x1="16" y1="10" x2="16" y2="18"/><line x1="32" y1="10" x2="32" y2="18"/></svg>
+        <p>No sessions saved yet.<br>Save your current tabs to get started.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       ANALYTICS PANEL
+  ════════════════════════════════════════════════════════ -->
+  <section class="panel" id="panelAnalytics" role="tabpanel" hidden>
+
+    <div class="stats-grid">
+      <div class="stat-card stat-blue">
+        <div class="stat-value" id="statExported">0</div>
+        <div class="stat-label">Tabs Exported</div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-value" id="statImported">0</div>
+        <div class="stat-label">Tabs Imported</div>
+      </div>
+      <div class="stat-card stat-yellow">
+        <div class="stat-value" id="statSessions">0</div>
+        <div class="stat-label">Sessions Saved</div>
+      </div>
+      <div class="stat-card stat-red">
+        <div class="stat-value" id="statDomains">0</div>
+        <div class="stat-label">Unique Domains</div>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-heading">Top Domains</div>
+      <div class="domain-list" id="domainList">
+        <div class="empty-state-sm">No data yet — export some tabs!</div>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-heading">Recent Activity</div>
+      <div class="activity-list" id="activityList">
+        <div class="empty-state-sm">No activity recorded yet.</div>
+      </div>
+    </div>
+
+    <div class="analytics-footer">
+      <button class="text-btn danger-btn" id="btnResetStats">Reset all stats</button>
+      <span class="analytics-note">All data stored locally.</span>
+    </div>
+  </section>
+
+  <!-- ── Save Session Modal ──────────────────────────────── -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" id="sessionModal">
+      <div class="modal-title">Save Session</div>
+      <input class="modal-input" type="text" id="modalSessionName" placeholder="e.g. Research, Morning Tabs…">
+      <div class="modal-meta" id="modalMeta"></div>
+      <div class="modal-btns">
+        <button class="btn btn-primary" id="modalBtnSave">Save Session</button>
+        <button class="btn btn-ghost" id="modalBtnCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Toast ──────────────────────────────────────────── -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/ui.js"></script>
   <script src="js/tabs.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/cleaner.js"></script>
+  <script src="js/sessions.js"></script>
   <script src="js/export.js"></script>
   <script src="js/import.js"></script>
   <script src="js/main.js"></script>

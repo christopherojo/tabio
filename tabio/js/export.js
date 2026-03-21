@@ -1,18 +1,16 @@
 /* ─────────────────────────────────────────────────────────
-   export.js  —  tabs → text logic
+   export.js  —  tabs → text, all formats + cleaning
 ───────────────────────────────────────────────────────── */
-
 'use strict';
 
 const Export = (() => {
 
   // ── State ────────────────────────────────────────────────
-
-  let scope         = 'window';   // 'window' | 'all' | 'selected'
-  let format        = 'url';      // 'url' | 'markdown' | 'titled'
-  let allTabs       = [];
-  let selectedIds   = new Set();
-  let lastOutput    = '';
+  let scope       = 'window';
+  let format      = 'url';
+  let allTabs     = [];
+  let selectedIds = new Set();
+  let lastOutput  = '';
 
   // ── Formatters ───────────────────────────────────────────
 
@@ -20,10 +18,108 @@ const Export = (() => {
     url:      tab => tab.url,
     markdown: tab => `[${_safeTitle(tab.title)}](${tab.url})`,
     titled:   tab => `${_safeTitle(tab.title)}: ${tab.url}`,
+
+    json: tabs => JSON.stringify(
+      tabs.map(t => ({ title: t.title || '', url: t.url })),
+      null, 2
+    ),
+
+    notion: tabs => tabs.map(t =>
+      `[${_safeTitle(t.title)}](${t.url})`
+    ).join('\n'),
   };
+
+  // Formats that receive the entire array (not per-tab)
+  const BULK_FORMATS = new Set(['json']);
 
   function _safeTitle(title) {
     return (title || 'Untitled').replace(/[\[\]]/g, '').trim();
+  }
+
+  // ── Build output string ──────────────────────────────────
+
+  function _buildOutput(tabs, fmt, grouped) {
+    if (grouped) {
+      return grouped.groups.map(({ domain, tabs: gtabs }) => {
+        const header = `── ${domain} (${gtabs.length}) ──`;
+        const lines  = _formatFlat(gtabs, fmt);
+        return `${header}\n${lines}`;
+      }).join('\n\n');
+    }
+    return _formatFlat(tabs, fmt);
+  }
+
+  function _formatFlat(tabs, fmt) {
+    if (BULK_FORMATS.has(fmt)) return formatters[fmt](tabs);
+    return tabs.map(t => (formatters[fmt] || formatters.url)(t)).join('\n');
+  }
+
+  // ── Generate ─────────────────────────────────────────────
+
+  async function generate() {
+    let tabs = await _getTabsByScope();
+    if (tabs.length === 0) { showToast('No valid tabs found!'); return null; }
+
+    // Apply cleaning
+    const cleaned = Cleaner.apply(tabs, {
+      dedupe:   getChipToggle('cleanDedupe'),
+      stripUtm: getChipToggle('cleanUtm'),
+      sort:     getChipToggle('cleanSort'),
+      group:    getChipToggle('cleanGroup'),
+    });
+
+    const flatTabs  = cleaned.grouped ? cleaned.groups.flatMap(g => g.tabs) : cleaned.tabs;
+    lastOutput = _buildOutput(flatTabs, format, cleaned.grouped ? cleaned : null);
+
+    document.getElementById('outputBox').textContent = lastOutput;
+
+    // Track analytics
+    await Analytics.recordExport(flatTabs);
+
+    return flatTabs;
+  }
+
+  async function _getTabsByScope() {
+    let tabs = [];
+    if (scope === 'window')       tabs = await TabsAPI.getCurrentWindowTabs();
+    else if (scope === 'all')     tabs = await TabsAPI.getAllTabs();
+    else                          tabs = allTabs.filter(t => selectedIds.has(t.id));
+    return TabsAPI.filterNavigable(tabs);
+  }
+
+  // ── Copy ─────────────────────────────────────────────────
+
+  async function copyToClipboard() {
+    if (!lastOutput) await generate();
+    if (!lastOutput) { showToast('Nothing to copy!'); return; }
+    try {
+      await navigator.clipboard.writeText(lastOutput);
+    } catch {
+      const ta = Object.assign(document.createElement('textarea'), { value: lastOutput });
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    showToast('✓ Copied to clipboard!');
+  }
+
+  // ── Download file ────────────────────────────────────────
+
+  async function downloadFile() {
+    if (!lastOutput) await generate();
+    if (!lastOutput) { showToast('Nothing to download!'); return; }
+
+    const ext  = format === 'json' ? 'json' : (format === 'markdown' || format === 'notion') ? 'md' : 'txt';
+    const mime = format === 'json' ? 'application/json' : 'text/plain';
+    const name = `tabio-export-${new Date().toISOString().slice(0,10)}.${ext}`;
+
+    const blob = new Blob([lastOutput], { type: mime });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: name });
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded ${name}`);
   }
 
   // ── Tab picker ───────────────────────────────────────────
@@ -35,18 +131,23 @@ const Export = (() => {
     allTabs.forEach(tab => {
       const item = document.createElement('div');
       item.className = 'tab-item';
-      item.addEventListener('click', () => _toggleTab(tab.id, checkbox));
 
       const checkbox = document.createElement('div');
       checkbox.className = 'tab-checkbox' + (selectedIds.has(tab.id) ? ' checked' : '');
+
+      item.addEventListener('click', () => {
+        if (selectedIds.has(tab.id)) { selectedIds.delete(tab.id); checkbox.classList.remove('checked'); }
+        else                         { selectedIds.add(tab.id);    checkbox.classList.add('checked'); }
+        _updatePickerHeader();
+      });
 
       const favicon = _buildFavicon(tab);
 
       const info = document.createElement('div');
       info.className = 'tab-info';
       info.innerHTML = `
-        <div class="tab-title">${_escapeHtml(tab.title || '(untitled)')}</div>
-        <div class="tab-url">${_escapeHtml(tab.url || '')}</div>
+        <div class="tab-title">${_esc(tab.title || '(untitled)')}</div>
+        <div class="tab-url">${_esc(tab.url || '')}</div>
       `;
 
       item.append(checkbox, favicon, info);
@@ -58,9 +159,9 @@ const Export = (() => {
 
   function _buildFavicon(tab) {
     if (tab.favIconUrl && tab.favIconUrl.startsWith('http')) {
-      const img = document.createElement('img');
-      img.className = 'tab-favicon';
-      img.src = tab.favIconUrl;
+      const img = Object.assign(document.createElement('img'), {
+        className: 'tab-favicon', src: tab.favIconUrl,
+      });
       img.onerror = () => img.replaceWith(_fallbackFavicon());
       return img;
     }
@@ -68,91 +169,27 @@ const Export = (() => {
   }
 
   function _fallbackFavicon() {
-    const div = document.createElement('div');
-    div.className = 'tab-favicon-fallback';
-    return div;
-  }
-
-  function _toggleTab(id, checkbox) {
-    if (selectedIds.has(id)) {
-      selectedIds.delete(id);
-      checkbox.classList.remove('checked');
-    } else {
-      selectedIds.add(id);
-      checkbox.classList.add('checked');
-    }
-    _updatePickerHeader();
+    const d = document.createElement('div');
+    d.className = 'tab-favicon-fallback';
+    return d;
   }
 
   function _updatePickerHeader() {
     const count = selectedIds.size;
-    const allSelected = count === allTabs.length;
     document.getElementById('selectedCount').textContent = `${count} selected`;
-    document.getElementById('selectAllBtn').textContent = allSelected ? 'Deselect all' : 'Select all';
+    document.getElementById('selectAllBtn').textContent  = count === allTabs.length ? 'Deselect all' : 'Select all';
   }
 
   function _toggleSelectAll() {
-    if (selectedIds.size === allTabs.length) {
-      selectedIds.clear();
-    } else {
-      allTabs.forEach(t => selectedIds.add(t.id));
-    }
+    if (selectedIds.size === allTabs.length) selectedIds.clear();
+    else allTabs.forEach(t => selectedIds.add(t.id));
     _renderTabPicker();
-  }
-
-  // ── Generate ─────────────────────────────────────────────
-
-  async function generate() {
-    let tabs = [];
-
-    if (scope === 'window') {
-      tabs = await TabsAPI.getCurrentWindowTabs();
-    } else if (scope === 'all') {
-      tabs = await TabsAPI.getAllTabs();
-    } else {
-      tabs = allTabs.filter(t => selectedIds.has(t.id));
-    }
-
-    tabs = TabsAPI.filterNavigable(tabs);
-
-    if (tabs.length === 0) {
-      showToast('No valid tabs found!');
-      return;
-    }
-
-    const formatter = formatters[format] || formatters.url;
-    lastOutput = tabs.map(formatter).join('\n');
-
-    const box = document.getElementById('outputBox');
-    box.textContent = lastOutput;
-  }
-
-  async function copyToClipboard() {
-    if (!lastOutput) await generate();
-    if (!lastOutput) { showToast('Nothing to copy!'); return; }
-
-    try {
-      await navigator.clipboard.writeText(lastOutput);
-    } catch {
-      // Fallback for clipboard permission issues
-      const ta = document.createElement('textarea');
-      ta.value = lastOutput;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    showToast('✓ Copied to clipboard!');
   }
 
   // ── Helpers ──────────────────────────────────────────────
 
-  function _escapeHtml(str) {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ── Init ─────────────────────────────────────────────────
@@ -161,25 +198,20 @@ const Export = (() => {
     allTabs = await TabsAPI.getCurrentWindowTabs();
     allTabs.forEach(t => selectedIds.add(t.id));
 
-    // Scope
-    bindScopeButtons(['scopeWindow', 'scopeAll', 'scopeSelected'], (s) => {
+    bindScopeButtons(['scopeWindow','scopeAll','scopeSelected'], s => {
       scope = s;
-      const wrap = document.getElementById('tabPickerWrap');
-      wrap.hidden = (s !== 'selected');
+      document.getElementById('tabPickerWrap').hidden = s !== 'selected';
       if (s === 'selected') _renderTabPicker();
     });
 
-    // Format
-    bindChips(['fmtUrl', 'fmtMarkdown', 'fmtTitled'], (f) => { format = f; });
+    bindChips(['fmtUrl','fmtMarkdown','fmtTitled','fmtJson','fmtNotion'], f => { format = f; });
 
-    // Select all button
     document.getElementById('selectAllBtn').addEventListener('click', _toggleSelectAll);
-
-    // Action buttons
     document.getElementById('btnGenerate').addEventListener('click', generate);
     document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
+    document.getElementById('btnDownload').addEventListener('click', downloadFile);
   }
 
-  return { init };
+  return { init, generate, copyToClipboard };
 
 })();
