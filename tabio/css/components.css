@@ -1,0 +1,286 @@
+/* ─────────────────────────────────────────────────────────
+   components.css  —  buttons, chips, toggles, badge, toast
+───────────────────────────────────────────────────────── */
+
+/* ── Tab count badge ──────────────────────────── */
+.tab-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+/* ── Buttons ──────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 700;
+  transition: box-shadow 0.15s, transform 0.1s, background 0.15s;
+}
+
+.btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.btn:hover   { transform: translateY(-1px); }
+.btn:active  { transform: translateY(0); }
+
+.btn-primary {
+  background: var(--google-blue);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { box-shadow: var(--shadow-md); background: #1765cc; }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--surface-hover); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+/* ── Chips ────────────────────────────────────── */
+.chip-group {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.chip:hover:not(.active) {
+  border-color: var(--text-hint);
+  color: var(--text-primary);
+}
+
+.chip.active {
+  background: var(--google-blue-lt);
+  border-color: var(--google-blue);
+  color: var(--google-blue);
+}
+
+/* ── Scope buttons ────────────────────────────── */
+.scope-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.scope-btn {
+  flex: 1;
+  padding: 7px 6px;
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.scope-btn:hover:not(.active) {
+  border-color: var(--text-hint);
+  color: var(--text-primary);
+}
+
+.scope-btn.active {
+  background: var(--google-blue-lt);
+  border-color: var(--google-blue);
+  color: var(--google-blue);
+}
+
+/* ── Toggles ──────────────────────────────────── */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle {
+  width: 32px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle.on               { background: var(--google-blue); }
+.toggle.on::after        { left: 16px; }
+
+.toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ── Text button ──────────────────────────────── */
+.text-btn {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--google-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.text-btn:hover { text-decoration: underline; }
+
+/* ── Toast ────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--text-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+  white-space: nowrap;
+  z-index: 999;
+  box-shadow: var(--shadow-md);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Tab list items ───────────────────────────── */
+.tab-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  max-height: 170px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+  cursor: pointer;
+}
+
+.tab-item:last-child { border-bottom: none; }
+.tab-item:hover      { background: var(--surface); }
+
+.tab-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.tab-checkbox.checked {
+  background: var(--google-blue);
+  border-color: var(--google-blue);
+}
+
+.tab-checkbox.checked::after {
+  content: '';
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.tab-favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.tab-favicon-fallback {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.tab-info    { flex: 1; min-width: 0; }
+
+.tab-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-url {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-hint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,110 @@
+/* ─────────────────────────────────────────────────────────
+   import.css  —  import panel specific styles
+───────────────────────────────────────────────────────── */
+
+.import-textarea {
+  width: 100%;
+  height: 155px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 10.5px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: block;
+}
+
+.import-textarea::placeholder { color: var(--text-hint); }
+
+.import-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
+}
+
+.char-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-hint);
+  text-align: right;
+  margin: 4px 0 10px;
+}
+
+/* Parsed preview */
+.parsed-preview {
+  background: var(--google-green-lt);
+  border: 1px solid #b7dfbf;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.parsed-preview[hidden] { display: none; }
+
+.parsed-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--google-green);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.parsed-url-list { max-height: 72px; overflow-y: auto; }
+
+.parsed-url-item {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1.5px 0;
+}
+
+.parsed-url-item .url-text { color: var(--text-primary); }
+
+/* Options */
+.options-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  background: var(--google-blue-lt);
+  border: 1px solid #aecbfa;
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+}
+
+.status-bar[hidden] { display: none; }
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--google-blue);
+  flex-shrink: 0;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.status-text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--google-blue);
+}

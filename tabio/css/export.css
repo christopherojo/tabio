@@ -1,0 +1,66 @@
+/* ─────────────────────────────────────────────────────────
+   export.css  —  export panel specific styles
+───────────────────────────────────────────────────────── */
+
+.format-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.row-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  flex-shrink: 0;
+}
+
+.tab-picker-wrap {
+  margin-bottom: 12px;
+}
+
+.tab-picker-wrap[hidden] { display: none; }
+
+.picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.picker-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.output-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  min-height: 64px;
+  max-height: 110px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+  transition: border-color 0.15s;
+}
+
+.output-box:focus-within {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.output-box .placeholder {
+  color: var(--text-hint);
+  font-style: italic;
+}

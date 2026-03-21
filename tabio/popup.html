@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tabio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/export.css">
+  <link rel="stylesheet" href="css/import.css">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="header">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="6" width="6" height="4" rx="1.5" fill="var(--google-blue)"/>
+        <rect x="10" y="6" width="6" height="4" rx="1.5" fill="var(--google-red)"/>
+        <rect x="18" y="6" width="4" height="4" rx="1.5" fill="var(--google-yellow)"/>
+        <rect x="2" y="12" width="20" height="1.5" rx="0.75" fill="var(--border)"/>
+        <rect x="2" y="15" width="14" height="2" rx="1" fill="var(--text-secondary)"/>
+        <rect x="2" y="19" width="10" height="2" rx="1" fill="var(--border)"/>
+      </svg>
+      <span class="logo-text">Tabio</span>
+    </div>
+    <span class="tab-badge" id="tabCountBadge">— tabs</span>
+  </header>
+
+  <!-- ── Mode Toggle ────────────────────────────────────── -->
+  <div class="mode-toggle" role="tablist">
+    <button class="mode-btn active" id="modeExport" role="tab" aria-selected="true">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/>
+        <polyline points="13 7 10 4 7 7"/>
+        <line x1="10" y1="4" x2="10" y2="13"/>
+      </svg>
+      Tabs → Text
+    </button>
+    <button class="mode-btn" id="modeImport" role="tab" aria-selected="false">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/>
+        <polyline points="7 9 10 12 13 9"/>
+        <line x1="10" y1="12" x2="10" y2="3"/>
+      </svg>
+      Text → Tabs
+    </button>
+  </div>
+
+  <!-- ── Export Panel ───────────────────────────────────── -->
+  <section class="panel active" id="panelExport" role="tabpanel">
+
+    <div class="scope-row">
+      <button class="scope-btn active" id="scopeWindow">This Window</button>
+      <button class="scope-btn" id="scopeAll">All Windows</button>
+      <button class="scope-btn" id="scopeSelected">Pick Tabs</button>
+    </div>
+
+    <div class="format-row">
+      <span class="row-label">Format</span>
+      <div class="chip-group">
+        <button class="chip active" id="fmtUrl">URLs</button>
+        <button class="chip" id="fmtMarkdown">Markdown</button>
+        <button class="chip" id="fmtTitled">Title + URL</button>
+      </div>
+    </div>
+
+    <!-- Tab picker (visible when scope = selected) -->
+    <div class="tab-picker-wrap" id="tabPickerWrap" hidden>
+      <div class="picker-header">
+        <span class="picker-count" id="selectedCount">0 selected</span>
+        <button class="text-btn" id="selectAllBtn">Select all</button>
+      </div>
+      <div class="tab-list" id="tabPickerList"></div>
+    </div>
+
+    <div class="output-box" id="outputBox">
+      <span class="placeholder">Your tab links will appear here…</span>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGenerate">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 12 16 12 13 19 7 1 4 12 0 12"/>
+        </svg>
+        Generate
+      </button>
+      <button class="btn btn-secondary" id="btnCopy">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="8" width="11" height="11" rx="2"/>
+          <path d="M4 12H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Import Panel ───────────────────────────────────── -->
+  <section class="panel" id="panelImport" role="tabpanel" hidden>
+
+    <textarea
+      class="import-textarea"
+      id="importTextarea"
+      placeholder="Paste URLs, Markdown links, or Title: URL text…&#10;&#10;Supports:&#10;• https://plain-url.com&#10;• [Title](https://url.com)&#10;• Title: https://url.com"
+    ></textarea>
+
+    <div class="char-count" id="charCount">0 characters</div>
+
+    <div class="parsed-preview" id="parsedPreview" hidden>
+      <span class="parsed-label" id="parsedLabel">0 URLs found</span>
+      <div class="parsed-url-list" id="parsedUrlList"></div>
+    </div>
+
+    <div class="options-row">
+      <label class="toggle-wrap">
+        <div class="toggle" id="toggleNewWindow"></div>
+        <span class="toggle-label">New window</span>
+      </label>
+      <label class="toggle-wrap">
+        <div class="toggle" id="toggleCloseExisting"></div>
+        <span class="toggle-label">Close current tabs</span>
+      </label>
+    </div>
+
+    <div class="status-bar" id="statusBar" hidden>
+      <span class="status-dot"></span>
+      <span class="status-text" id="statusText">Opening tabs…</span>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnOpenTabs">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>
+          <polyline points="12 2 18 2 18 8"/>
+          <line x1="8" y1="12" x2="18" y2="2"/>
+        </svg>
+        Open Tabs
+      </button>
+      <button class="btn btn-ghost" id="btnClear">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 19 6"/>
+          <path d="M16 6l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/>
+          <path d="M8 6V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/>
+        </svg>
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Toast ──────────────────────────────────────────── -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/ui.js"></script>
+  <script src="js/tabs.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/import.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
