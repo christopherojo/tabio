@@ -30,7 +30,27 @@
       </svg>
       <span class="logo-text">Tabio</span>
     </div>
-    <span class="tab-badge" id="tabCountBadge">— tabs</span>
+    <div class="header-right">
+      <span class="tab-badge" id="tabCountBadge">— tabs</span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <!-- Sun icon (shown in dark mode) -->
+        <svg class="icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="4"/>
+          <line x1="10" y1="2" x2="10" y2="4"/>
+          <line x1="10" y1="16" x2="10" y2="18"/>
+          <line x1="2" y1="10" x2="4" y2="10"/>
+          <line x1="16" y1="10" x2="18" y2="10"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="14.36" y1="14.36" x2="15.78" y2="15.78"/>
+          <line x1="4.22" y1="15.78" x2="5.64" y2="14.36"/>
+          <line x1="14.36" y1="5.64" x2="15.78" y2="4.22"/>
+        </svg>
+        <!-- Moon icon (shown in light mode) -->
+        <svg class="icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.5 12.5A7.5 7.5 0 0 1 7.5 2.5a7.5 7.5 0 1 0 10 10z"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <!-- ── Nav ────────────────────────────────────────────── -->
@@ -166,6 +186,12 @@
           <button class="text-btn" id="deselectAllUrls">None</button>
         </div>
       </div>
+      <!-- Domain insights chips -->
+      <div class="domain-insights" id="domainInsights" hidden></div>
+      <!-- Filter input -->
+      <div class="preview-filter-wrap" id="previewFilter" hidden>
+        <input class="preview-filter-input" type="text" id="previewFilterInput" placeholder="Filter URLs… (Alt+F)">
+      </div>
       <div class="parsed-url-list" id="parsedUrlList"></div>
     </div>
 
@@ -178,6 +204,10 @@
       <label class="toggle-wrap">
         <div class="toggle" id="toggleCloseExisting"></div>
         <span class="toggle-label">Close existing</span>
+      </label>
+      <label class="toggle-wrap">
+        <div class="toggle" id="togglePerWindow"></div>
+        <span class="toggle-label">One window per section</span>
       </label>
     </div>
 
@@ -198,6 +228,15 @@
       </div>
     </div>
 
+    <!-- Confirmation bar (shown for large batches) -->
+    <div class="confirm-bar" id="confirmBar" hidden>
+      <span class="confirm-text" id="confirmBarText"></span>
+      <div class="confirm-btns">
+        <button class="btn btn-primary btn-sm" id="confirmBarYes">Open</button>
+        <button class="btn btn-ghost btn-sm" id="confirmBarNo">Cancel</button>
+      </div>
+    </div>
+
     <div class="status-bar" id="statusBar" hidden>
       <span class="status-dot"></span>
       <span class="status-text" id="statusText">Opening tabs…</span>
@@ -207,6 +246,10 @@
       <button class="btn btn-primary" id="btnOpenTabs">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><polyline points="12 2 18 2 18 8"/><line x1="8" y1="12" x2="18" y2="2"/></svg>
         Open Tabs
+      </button>
+      <button class="btn btn-ghost" id="btnUndo" title="Undo last import (Alt+U)" hidden>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.56"/></svg>
+        Undo
       </button>
       <button class="btn btn-ghost" id="btnClear">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 19 6"/><path d="M16 6l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/><path d="M8 6V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
@@ -310,6 +353,7 @@
   <script src="js/ui.js"></script>
   <script src="js/tabs.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/theme.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/cleaner.js"></script>
   <script src="js/sessions.js"></script>

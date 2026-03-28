@@ -52,7 +52,7 @@ const TabsAPI = {
     const result = [];
 
     for (const win of allWindows) {
-      const tabs = (win.tabs || []).filter(t => this._isNavigable(t));
+      const tabs = (win.tabs || []).filter(t => this._hasUrl(t));
 
       let groups = [];
       try {
@@ -119,14 +119,42 @@ const TabsAPI = {
 
   // ── Helpers ──────────────────────────────────────────────
 
-  _isNavigable(t) {
-    return t.url &&
-      !t.url.startsWith('chrome://') &&
-      !t.url.startsWith('chrome-extension://') &&
-      !t.url.startsWith('about:');
+  /**
+   * Has any URL — for EXPORT. Includes chrome://, edge://, file://, about:.
+   * Only excludes tabs with no URL at all.
+   */
+  _hasUrl(t) {
+    return !!(t.url && t.url.length > 0);
   },
 
+  /**
+   * Safe to open via chrome.tabs.create — for IMPORT.
+   * chrome://, edge://, about:, chrome-extension:// etc. cannot be
+   * programmatically opened by an extension.
+   * file:// can be opened if the user has enabled "Allow access to file URLs".
+   */
+  _isOpenable(t) {
+    if (!t.url) return false;
+    const BLOCKED = [
+      'chrome://', 'chrome-extension://', 'edge://',
+      'brave://', 'opera://', 'vivaldi://', 'about:',
+      'javascript:', 'data:',
+    ];
+    return !BLOCKED.some(b => t.url.startsWith(b));
+  },
+
+  /** For export — everything with a URL */
+  filterExportable(tabs) {
+    return tabs.filter(t => this._hasUrl(t));
+  },
+
+  /** For opening via tabs.create — http/https/file/ftp only */
+  filterOpenable(tabs) {
+    return tabs.filter(t => this._isOpenable(t));
+  },
+
+  /** Alias kept for backward compat — now same as filterExportable */
   filterNavigable(tabs) {
-    return tabs.filter(t => this._isNavigable(t));
+    return this.filterExportable(tabs);
   },
 };

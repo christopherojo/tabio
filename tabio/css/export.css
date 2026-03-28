@@ -136,3 +136,7 @@
 }
 
 .output-box .placeholder { color: var(--text-hint); font-style: italic; }
+
+/* ── Dark mode overrides ─────────────────────────────── */
+[data-theme="dark"] .output-box         { background: var(--surface); color: var(--text-primary); }
+[data-theme="dark"] .scope-sub          { background: var(--surface); }

@@ -1,9 +1,10 @@
 /* ─────────────────────────────────────────────────────────
-   base.css  —  design tokens, reset, typography
+   base.css  —  design tokens, reset, typography, dark mode
 ───────────────────────────────────────────────────────── */
 
+/* ── Light theme (default) ─────────────────────────────── */
 :root {
-  /* Google palette */
+  /* Google palette — accent colours stay the same in both themes */
   --google-blue:      #1a73e8;
   --google-blue-lt:   #e8f0fe;
   --google-blue-mid:  #aecbfa;
@@ -26,21 +27,48 @@
   --text-secondary: #5f6368;
   --text-hint:      #9aa0a6;
 
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(60,64,67,.12), 0 1px 2px rgba(60,64,67,.08);
+  --shadow-md: 0 2px 6px rgba(60,64,67,.15), 0 1px 3px rgba(60,64,67,.10);
+
   /* Radius */
   --radius-sm:   6px;
   --radius-md:   10px;
   --radius-lg:   16px;
   --radius-pill: 999px;
 
-  /* Shadow */
-  --shadow-sm: 0 1px 3px rgba(60,64,67,.12), 0 1px 2px rgba(60,64,67,.08);
-  --shadow-md: 0 2px 6px rgba(60,64,67,.15), 0 1px 3px rgba(60,64,67,.10);
-
   /* Type */
   --font-ui:   'Nunito', sans-serif;
   --font-mono: 'Roboto Mono', monospace;
 }
 
+/* ── Dark theme ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* Surfaces */
+  --bg:             #1e1e2e;
+  --surface:        #27273a;
+  --surface-hover:  #32324a;
+  --border:         #3a3a52;
+  --border-focus:   #669df6;
+
+  /* Text */
+  --text-primary:   #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-hint:      #5f6368;
+
+  /* Accent light variants — darken for dark surfaces */
+  --google-blue-lt:   rgba(26,115,232,.18);
+  --google-blue-mid:  rgba(26,115,232,.40);
+  --google-red-lt:    rgba(234,67,53,.18);
+  --google-green-lt:  rgba(52,168,83,.18);
+  --google-yellow-lt: rgba(251,188,4,.15);
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 2px 6px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.35);
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -52,6 +80,7 @@ body {
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background .2s, color .2s;
 }
 
 button   { font-family: var(--font-ui); cursor: pointer; border: none; background: none; }

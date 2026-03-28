@@ -106,3 +106,9 @@
   border: 1px solid var(--border);
   color: var(--text-secondary);
 }
+
+/* ── Dark mode overrides ─────────────────────────────── */
+[data-theme="dark"] .save-dialog        { background: rgba(26,115,232,.1); border-color: rgba(26,115,232,.3); }
+[data-theme="dark"] .save-name-input    { background: var(--surface); color: var(--text-primary); border-color: var(--border); }
+[data-theme="dark"] .session-card       { background: var(--surface); }
+[data-theme="dark"] .domain-pill        { background: var(--bg); }

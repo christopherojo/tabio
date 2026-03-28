@@ -24,23 +24,38 @@ const Export = (() => {
   // ── Formatters ───────────────────────────────────────────
 
   // Per-tab formatters (receive one tab, return one string)
+  // Special URLs (file://, chrome://, edge://, etc.) are preserved as-is.
   const TAB_FORMATTERS = {
     url:      t => t.url,
-    markdown: t => `[${_safeTitle(t.title)}](${t.url})`,
+    markdown: t => _isSpecialUrl(t.url)
+                     ? `${_safeTitle(t.title)}: ${t.url}`
+                     : `[${_safeTitle(t.title)}](${t.url})`,
     titled:   t => `${_safeTitle(t.title)}: ${t.url}`,
-    notion:   t => `- [${_safeTitle(t.title)}](${t.url})`,
+    notion:   t => _isSpecialUrl(t.url)
+                     ? `- ${_safeTitle(t.title)}: ${t.url}`
+                     : `- [${_safeTitle(t.title)}](${t.url})`,
   };
 
   // Bulk formatters (receive full tab array, return full string)
   const BULK_FORMATTERS = {
     json: tabs => JSON.stringify(
-      tabs.map(t => ({ title: t.title || '', url: t.url })),
+      tabs.map(t => {
+        const entry = { title: t.title || '', url: t.url };
+        if (_isSpecialUrl(t.url)) entry.urlType = t.url.split('://')[0] || t.url.split(':')[0];
+        return entry;
+      }),
       null, 2
     ),
   };
 
   function _safeTitle(title) {
     return (title || 'Untitled').replace(/[\[\]]/g, '').trim();
+  }
+
+  /** Returns true for URLs that can't be wrapped in Markdown links cleanly */
+  function _isSpecialUrl(url) {
+    if (!url) return false;
+    return !url.startsWith('http://') && !url.startsWith('https://');
   }
 
   function _isBulk(fmt) { return fmt in BULK_FORMATTERS; }
@@ -151,17 +166,17 @@ const Export = (() => {
     // Returns { type: 'flat'|'groups'|'windows', ... }
 
     if (scope === 'window') {
-      const tabs = TabsAPI.filterNavigable(await TabsAPI.getCurrentWindowTabs());
+      const tabs = TabsAPI.filterExportable(await TabsAPI.getCurrentWindowTabs());
       return { type: 'flat', tabs };
     }
 
     if (scope === 'all') {
-      const tabs = TabsAPI.filterNavigable(await TabsAPI.getAllTabs());
+      const tabs = TabsAPI.filterExportable(await TabsAPI.getAllTabs());
       return { type: 'flat', tabs };
     }
 
     if (scope === 'selected') {
-      const tabs = TabsAPI.filterNavigable(allTabs.filter(t => selectedIds.has(t.id)));
+      const tabs = TabsAPI.filterExportable(allTabs.filter(t => selectedIds.has(t.id)));
       return { type: 'flat', tabs };
     }
 
@@ -226,6 +241,8 @@ const Export = (() => {
     lastOutput = output;
     document.getElementById('outputBox').textContent = output;
     await Analytics.recordExport(flatTabsForAnalytics);
+    // Auto-save as last session for quick restore
+    await Sessions.saveLastSession(flatTabsForAnalytics);
     return flatTabsForAnalytics;
   }
 

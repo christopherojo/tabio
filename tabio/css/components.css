@@ -300,3 +300,22 @@
   padding: 10px 0;
   text-align: center;
 }
+
+/* ── Dark mode overrides ─────────────────────────────── */
+[data-theme="dark"] .btn-primary:hover  { background: #5094ed; }
+[data-theme="dark"] .btn-secondary      { background: var(--surface); border-color: var(--border); }
+[data-theme="dark"] .btn-ghost          { border-color: var(--border); }
+[data-theme="dark"] .btn-danger         { background: rgba(234,67,53,.18); border-color: rgba(234,67,53,.4); }
+[data-theme="dark"] .btn-danger:hover   { background: rgba(234,67,53,.28); }
+
+[data-theme="dark"] .modal-backdrop     { background: rgba(0,0,0,.6); }
+[data-theme="dark"] .modal              { border: 1px solid var(--border); }
+[data-theme="dark"] .modal-input        { background: var(--surface); color: var(--text-primary); }
+
+[data-theme="dark"] .tab-checkbox.checked  { background: var(--google-blue); }
+[data-theme="dark"] .chip.active           { background: rgba(26,115,232,.22); }
+[data-theme="dark"] .chip-toggle.on        { background: rgba(52,168,83,.22); }
+[data-theme="dark"] .scope-btn.active      { background: rgba(26,115,232,.22); }
+[data-theme="dark"] .toggle.on             { background: var(--google-blue); }
+
+[data-theme="dark"] .toast { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); }
