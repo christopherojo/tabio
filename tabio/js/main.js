@@ -1,6 +1,5 @@
 /* ─────────────────────────────────────────────────────────
-   main.js  —  entry point: init all modules, wire nav,
-               keyboard shortcuts
+   main.js  —  entry point: init modules, nav, shortcuts
 ───────────────────────────────────────────────────────── */
 'use strict';
 
@@ -11,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tabCountBadge').textContent =
     `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
 
-  // ── Nav buttons ──────────────────────────────────────────
+  // ── Nav ──────────────────────────────────────────────────
   const navMap = {
     modeExport:    'export',
     modeImport:    'import',
@@ -27,37 +26,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // ── Init all modules ─────────────────────────────────────
+  // ── Init modules ─────────────────────────────────────────
+  await Theme.init();
   await Export.init();
   Import.init();
   Sessions.init();
   Analytics.init();
 
   // ── Keyboard shortcuts ───────────────────────────────────
-  // Alt+E  → Export panel
-  // Alt+I  → Import panel
-  // Alt+S  → Sessions panel
-  // Alt+A  → Analytics panel
-  // Alt+G  → Generate (when on export)
-  // Alt+C  → Copy (when on export)
-  // Alt+O  → Open tabs (when on import)
+  // Alt+E  → Export       Alt+I → Import
+  // Alt+S  → Sessions     Alt+A → Analytics
+  // Alt+G  → Generate     Alt+C → Copy
+  // Alt+O  → Open tabs    Alt+U → Undo import
+  // Alt+F  → Focus filter (import panel)
 
   document.addEventListener('keydown', async e => {
     if (!e.altKey) return;
+
+    const exportVisible = !document.getElementById('panelExport').hidden;
+    const importVisible = !document.getElementById('panelImport').hidden;
 
     switch (e.key.toLowerCase()) {
       case 'e': e.preventDefault(); document.getElementById('modeExport').click();    break;
       case 'i': e.preventDefault(); document.getElementById('modeImport').click();    break;
       case 's': e.preventDefault(); document.getElementById('modeSessions').click();  break;
       case 'a': e.preventDefault(); document.getElementById('modeAnalytics').click(); break;
-      case 'g': e.preventDefault();
-        if (!document.getElementById('panelExport').hidden) await Export.generate();
+      case 'g':
+        e.preventDefault();
+        if (exportVisible) await Export.generate();
         break;
-      case 'c': e.preventDefault();
-        if (!document.getElementById('panelExport').hidden) await Export.copyToClipboard();
+      case 'c':
+        e.preventDefault();
+        if (exportVisible) await Export.copyToClipboard();
         break;
-      case 'o': e.preventDefault();
-        if (!document.getElementById('panelImport').hidden) document.getElementById('btnOpenTabs').click();
+      case 'o':
+        e.preventDefault();
+        if (importVisible) document.getElementById('btnOpenTabs').click();
+        break;
+      case 'u':
+        e.preventDefault();
+        if (importVisible) await Import.undoLastImport();
+        break;
+      case 'f':
+        e.preventDefault();
+        if (importVisible) {
+          const f = document.getElementById('previewFilterInput');
+          if (f && !document.getElementById('parsedPreview').hidden) f.focus();
+        }
         break;
     }
   });

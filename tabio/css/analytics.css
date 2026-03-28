@@ -92,3 +92,9 @@
 }
 
 .analytics-note { font-size: 10px; color: var(--text-hint); }
+
+/* ── Dark mode overrides ─────────────────────────────── */
+[data-theme="dark"] .stat-blue          { background: rgba(26,115,232,.15);  border-color: rgba(26,115,232,.35); }
+[data-theme="dark"] .stat-green         { background: rgba(52,168,83,.15);   border-color: rgba(52,168,83,.35); }
+[data-theme="dark"] .stat-yellow        { background: rgba(251,188,4,.12);   border-color: rgba(251,188,4,.3); }
+[data-theme="dark"] .stat-red           { background: rgba(234,67,53,.15);   border-color: rgba(234,67,53,.35); }
