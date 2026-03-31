@@ -1,57 +1,67 @@
 /* ─────────────────────────────────────────────────────────
-   main.js  —  entry point: init modules, nav, shortcuts
+   main.js  —  entry point
 ───────────────────────────────────────────────────────── */
 'use strict';
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-  // ── Tab count badge ──────────────────────────────────────
+  // Tab count badge
   const tabs = await TabsAPI.getCurrentWindowTabs();
   document.getElementById('tabCountBadge').textContent =
     `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
 
-  // ── Nav ──────────────────────────────────────────────────
+  // Nav
   const navMap = {
     modeExport:    'export',
     modeImport:    'import',
     modeSessions:  'sessions',
+    modeGroups:    'groups',
     modeAnalytics: 'analytics',
+    modeSettings:  'settings',
   };
+
+  // Update ui.js panel/btn lists to include new panels
+  _allPanels.push('panelGroups','panelSettings');
+  _allModeBtns.push('modeGroups','modeSettings');
 
   Object.entries(navMap).forEach(([btnId, mode]) => {
     document.getElementById(btnId).addEventListener('click', async () => {
       switchMode(mode);
       if (mode === 'sessions')  await Sessions.render();
+      if (mode === 'groups')    await Groups.render();
       if (mode === 'analytics') await Analytics.render();
+      if (mode === 'settings')  await Settings.render();
     });
   });
 
-  // ── Init modules ─────────────────────────────────────────
+  // Init modules
+  await Settings.load();
   await Theme.init();
   await Export.init();
   Import.init();
   Sessions.init();
+  Groups.init();
   Analytics.init();
 
-  // ── Keyboard shortcuts ───────────────────────────────────
-  // Alt+E  → Export       Alt+I → Import
-  // Alt+S  → Sessions     Alt+A → Analytics
-  // Alt+G  → Generate     Alt+C → Copy
-  // Alt+O  → Open tabs    Alt+U → Undo import
-  // Alt+F  → Focus filter (import panel)
-
+  // Keyboard shortcuts
   document.addEventListener('keydown', async e => {
     if (!e.altKey) return;
 
-    const exportVisible = !document.getElementById('panelExport').hidden;
-    const importVisible = !document.getElementById('panelImport').hidden;
+    const exportVisible   = !document.getElementById('panelExport').hidden;
+    const importVisible   = !document.getElementById('panelImport').hidden;
 
     switch (e.key.toLowerCase()) {
-      case 'e': e.preventDefault(); document.getElementById('modeExport').click();    break;
-      case 'i': e.preventDefault(); document.getElementById('modeImport').click();    break;
-      case 's': e.preventDefault(); document.getElementById('modeSessions').click();  break;
-      case 'a': e.preventDefault(); document.getElementById('modeAnalytics').click(); break;
+      case 'e':        e.preventDefault(); document.getElementById('modeExport').click();    break;
+      case 'i':        e.preventDefault(); document.getElementById('modeImport').click();    break;
+      case 's':        e.preventDefault(); document.getElementById('modeSessions').click();  break;
       case 'g':
+        // Alt+G: generate on export, else go to Groups
+        if (exportVisible) { e.preventDefault(); await Export.generate(); }
+        else { e.preventDefault(); document.getElementById('modeGroups').click(); }
+        break;
+      case 'a':        e.preventDefault(); document.getElementById('modeAnalytics').click(); break;
+      case ',':        e.preventDefault(); document.getElementById('modeSettings').click();  break;
+      case 'enter':
         e.preventDefault();
         if (exportVisible) await Export.generate();
         break;

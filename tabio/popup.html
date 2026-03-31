@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="css/import.css">
   <link rel="stylesheet" href="css/sessions.css">
   <link rel="stylesheet" href="css/analytics.css">
+  <link rel="stylesheet" href="css/groups.css">
+  <link rel="stylesheet" href="css/settings.css">
 </head>
 <body>
 
@@ -33,19 +35,12 @@
     <div class="header-right">
       <span class="tab-badge" id="tabCountBadge">— tabs</span>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-        <!-- Sun icon (shown in dark mode) -->
         <svg class="icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="10" cy="10" r="4"/>
-          <line x1="10" y1="2" x2="10" y2="4"/>
-          <line x1="10" y1="16" x2="10" y2="18"/>
-          <line x1="2" y1="10" x2="4" y2="10"/>
-          <line x1="16" y1="10" x2="18" y2="10"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="14.36" y1="14.36" x2="15.78" y2="15.78"/>
-          <line x1="4.22" y1="15.78" x2="5.64" y2="14.36"/>
-          <line x1="14.36" y1="5.64" x2="15.78" y2="4.22"/>
+          <circle cx="10" cy="10" r="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="10" y1="16" x2="10" y2="18"/>
+          <line x1="2" y1="10" x2="4" y2="10"/><line x1="16" y1="10" x2="18" y2="10"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="14.36" y1="14.36" x2="15.78" y2="15.78"/>
+          <line x1="4.22" y1="15.78" x2="5.64" y2="14.36"/><line x1="14.36" y1="5.64" x2="15.78" y2="4.22"/>
         </svg>
-        <!-- Moon icon (shown in light mode) -->
         <svg class="icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17.5 12.5A7.5 7.5 0 0 1 7.5 2.5a7.5 7.5 0 1 0 10 10z"/>
         </svg>
@@ -67,9 +62,17 @@
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="6" y1="3" x2="6" y2="7"/><line x1="14" y1="3" x2="14" y2="7"/></svg>
       Sessions
     </button>
+    <button class="mode-btn" id="modeGroups" role="tab" data-panel="panelGroups">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="7" height="12" rx="2"/><rect x="11" y="4" width="7" height="12" rx="2"/></svg>
+      Groups
+    </button>
     <button class="mode-btn" id="modeAnalytics" role="tab" data-panel="panelAnalytics">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="17" x2="2" y2="17"/><polyline points="5 10 5 17"/><polyline points="9 6 9 17"/><polyline points="13 13 13 17"/><polyline points="17 3 17 17"/></svg>
       Stats
+    </button>
+    <button class="mode-btn" id="modeSettings" role="tab" data-panel="panelSettings">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.42 1.42M15.36 15.36l1.42 1.42M3.22 16.78l1.42-1.42M15.36 4.64l1.42-1.42"/></svg>
+      Settings
     </button>
   </nav>
 
@@ -87,25 +90,21 @@
       <button class="scope-btn" id="scopeSelected">Pick Tabs</button>
     </div>
 
-    <!-- Scope sub-pickers (shown contextually) -->
+    <!-- Scope sub-pickers -->
     <div class="scope-sub" id="scopeSubTabGroup" hidden>
       <div class="scope-sub-label">Select tab groups to export:</div>
-      <div class="group-picker" id="tabGroupPicker">
-        <span class="scope-sub-hint">Loading tab groups…</span>
-      </div>
+      <div class="group-picker" id="tabGroupPicker"><span class="scope-sub-hint">Loading…</span></div>
     </div>
 
     <div class="scope-sub" id="scopeSubWindows" hidden>
-      <div class="scope-sub-label">Select windows to export:</div>
-      <div class="group-picker" id="windowPicker">
-        <span class="scope-sub-hint">Loading windows…</span>
-      </div>
+      <div class="scope-sub-label">Select windows — click to expand and pick individual tabs:</div>
+      <div class="group-picker" id="windowPicker"><span class="scope-sub-hint">Loading…</span></div>
     </div>
 
     <!-- Format -->
     <div class="format-row">
       <span class="row-label">Format</span>
-      <div class="chip-group" id="formatChips">
+      <div class="chip-group">
         <button class="chip active" id="fmtUrl">URLs</button>
         <button class="chip" id="fmtMarkdown">Markdown</button>
         <button class="chip" id="fmtTitled">Title+URL</button>
@@ -114,7 +113,7 @@
       </div>
     </div>
 
-    <!-- Cleaning options -->
+    <!-- Cleaning -->
     <div class="clean-row">
       <span class="row-label">Clean</span>
       <div class="chip-group">
@@ -122,10 +121,27 @@
         <button class="chip-toggle" id="cleanUtm" title="Strip tracking params">Strip UTM</button>
         <button class="chip-toggle" id="cleanSort" title="Sort alphabetically">Sort</button>
         <button class="chip-toggle" id="cleanGroup" title="Group by domain">Group</button>
+        <button class="chip-toggle" id="cleanIncognito" title="Exclude incognito tabs">No Incognito</button>
       </div>
     </div>
 
-    <!-- Tab picker -->
+    <!-- Focus mode -->
+    <div class="focus-mode-row" id="focusModeRow" hidden>
+      <span class="row-label">Focus</span>
+      <select class="focus-mode-select" id="focusModeSelect">
+        <option value="">Off — show all sections</option>
+      </select>
+    </div>
+
+    <!-- Incognito privacy warning -->
+    <div class="incognito-warning" id="incognitoWarning" hidden>
+      🕵 Incognito tabs detected — review before sharing output
+    </div>
+
+    <!-- Density insights -->
+    <div class="density-insights" id="densityInsights" hidden></div>
+
+    <!-- Tab picker (Pick Tabs scope) -->
     <div class="tab-picker-wrap" id="tabPickerWrap" hidden>
       <div class="picker-header">
         <span class="picker-count" id="selectedCount">0 selected</span>
@@ -154,7 +170,7 @@
         Save
       </button>
       <button class="btn btn-ghost" id="btnSaveSession">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><polyline points="13 3 13 7 17 7"/><line x1="7" y1="11" x2="13" y2="11"/><line x1="7" y1="15" x2="13" y2="15"/></svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><polyline points="13 3 13 7 17 7"/></svg>
         Session
       </button>
     </div>
@@ -166,7 +182,7 @@
   <section class="panel" id="panelImport" role="tabpanel" hidden>
 
     <textarea class="import-textarea" id="importTextarea"
-      placeholder="Paste URLs, Markdown links, or Title: URL text…&#10;&#10;• https://example.com&#10;• [Title](https://url.com)&#10;• Title: https://url.com"></textarea>
+      placeholder="Paste URLs, Markdown, Title: URL, or Tabio export text…&#10;&#10;• https://example.com&#10;• [Title](https://url.com)&#10;• [Incognito] Title: https://url.com"></textarea>
 
     <div class="import-meta-row">
       <span class="char-count" id="charCount">0 chars</span>
@@ -177,7 +193,7 @@
       </div>
     </div>
 
-    <!-- Parsed preview with selectable URLs -->
+    <!-- Parsed preview -->
     <div class="parsed-preview" id="parsedPreview" hidden>
       <div class="parsed-header">
         <span class="parsed-label" id="parsedLabel">0 URLs</span>
@@ -186,9 +202,7 @@
           <button class="text-btn" id="deselectAllUrls">None</button>
         </div>
       </div>
-      <!-- Domain insights chips -->
       <div class="domain-insights" id="domainInsights" hidden></div>
-      <!-- Filter input -->
       <div class="preview-filter-wrap" id="previewFilter" hidden>
         <input class="preview-filter-input" type="text" id="previewFilterInput" placeholder="Filter URLs… (Alt+F)">
       </div>
@@ -202,16 +216,24 @@
         <span class="toggle-label">New window</span>
       </label>
       <label class="toggle-wrap">
+        <div class="toggle" id="toggleIncognito"></div>
+        <span class="toggle-label">Incognito</span>
+      </label>
+      <label class="toggle-wrap">
+        <div class="toggle" id="toggleMixedMode"></div>
+        <span class="toggle-label">Mixed mode</span>
+      </label>
+      <label class="toggle-wrap">
         <div class="toggle" id="toggleCloseExisting"></div>
         <span class="toggle-label">Close existing</span>
       </label>
       <label class="toggle-wrap">
         <div class="toggle" id="togglePerWindow"></div>
-        <span class="toggle-label">One window per section</span>
+        <span class="toggle-label">Per section → window</span>
       </label>
     </div>
 
-    <!-- Batch options -->
+    <!-- Batch -->
     <div class="batch-row">
       <span class="row-label">Batch</span>
       <div class="batch-controls">
@@ -228,7 +250,7 @@
       </div>
     </div>
 
-    <!-- Confirmation bar (shown for large batches) -->
+    <!-- Confirm bar -->
     <div class="confirm-bar" id="confirmBar" hidden>
       <span class="confirm-text" id="confirmBarText"></span>
       <div class="confirm-btns">
@@ -262,7 +284,6 @@
        SESSIONS PANEL
   ════════════════════════════════════════════════════════ -->
   <section class="panel" id="panelSessions" role="tabpanel" hidden>
-
     <div class="sessions-toolbar">
       <button class="btn btn-primary btn-sm" id="btnSaveNow">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><polyline points="13 3 13 7 17 7"/></svg>
@@ -272,65 +293,160 @@
         <input class="search-input" type="text" id="sessionSearch" placeholder="Search sessions…">
       </div>
     </div>
-
-    <!-- Save dialog -->
     <div class="save-dialog" id="saveDialog" hidden>
-      <input class="save-name-input" type="text" id="sessionNameInput" placeholder="Session name (e.g. Research, Work)">
+      <input class="save-name-input" type="text" id="sessionNameInput" placeholder="Session name">
       <div class="save-dialog-btns">
         <button class="btn btn-primary btn-sm" id="btnConfirmSave">Save</button>
         <button class="btn btn-ghost btn-sm" id="btnCancelSave">Cancel</button>
       </div>
     </div>
-
     <div class="session-list" id="sessionList">
       <div class="empty-state" id="sessionsEmpty">
         <svg viewBox="0 0 48 48" fill="none" stroke="var(--border)" stroke-width="2"><rect x="8" y="10" width="32" height="28" rx="4"/><line x1="8" y1="18" x2="40" y2="18"/><line x1="16" y1="10" x2="16" y2="18"/><line x1="32" y1="10" x2="32" y2="18"/></svg>
-        <p>No sessions saved yet.<br>Save your current tabs to get started.</p>
+        <p>No sessions yet.<br>Save your tabs to get started.</p>
       </div>
     </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       GROUPS PANEL
+  ════════════════════════════════════════════════════════ -->
+  <section class="panel" id="panelGroups" role="tabpanel" hidden>
+    <div id="groupsPanel"></div>
   </section>
 
   <!-- ════════════════════════════════════════════════════════
        ANALYTICS PANEL
   ════════════════════════════════════════════════════════ -->
   <section class="panel" id="panelAnalytics" role="tabpanel" hidden>
-
     <div class="stats-grid">
-      <div class="stat-card stat-blue">
-        <div class="stat-value" id="statExported">0</div>
-        <div class="stat-label">Tabs Exported</div>
-      </div>
-      <div class="stat-card stat-green">
-        <div class="stat-value" id="statImported">0</div>
-        <div class="stat-label">Tabs Imported</div>
-      </div>
-      <div class="stat-card stat-yellow">
-        <div class="stat-value" id="statSessions">0</div>
-        <div class="stat-label">Sessions Saved</div>
-      </div>
-      <div class="stat-card stat-red">
-        <div class="stat-value" id="statDomains">0</div>
-        <div class="stat-label">Unique Domains</div>
-      </div>
+      <div class="stat-card stat-blue"><div class="stat-value" id="statExported">0</div><div class="stat-label">Tabs Exported</div></div>
+      <div class="stat-card stat-green"><div class="stat-value" id="statImported">0</div><div class="stat-label">Tabs Imported</div></div>
+      <div class="stat-card stat-yellow"><div class="stat-value" id="statSessions">0</div><div class="stat-label">Sessions Saved</div></div>
+      <div class="stat-card stat-red"><div class="stat-value" id="statDomains">0</div><div class="stat-label">Unique Domains</div></div>
     </div>
-
     <div class="analytics-section">
       <div class="analytics-heading">Top Domains</div>
-      <div class="domain-list" id="domainList">
-        <div class="empty-state-sm">No data yet — export some tabs!</div>
-      </div>
+      <div class="domain-list" id="domainList"><div class="empty-state-sm">No data yet.</div></div>
     </div>
-
     <div class="analytics-section">
       <div class="analytics-heading">Recent Activity</div>
-      <div class="activity-list" id="activityList">
-        <div class="empty-state-sm">No activity recorded yet.</div>
-      </div>
+      <div class="activity-list" id="activityList"><div class="empty-state-sm">No activity yet.</div></div>
     </div>
-
     <div class="analytics-footer">
       <button class="text-btn danger-btn" id="btnResetStats">Reset all stats</button>
       <span class="analytics-note">All data stored locally.</span>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SETTINGS PANEL
+  ════════════════════════════════════════════════════════ -->
+  <section class="panel" id="panelSettings" role="tabpanel" hidden>
+
+    <!-- Export settings -->
+    <div class="settings-section">
+      <div class="settings-heading">Export</div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Default format</span>
+        </div>
+        <div class="setting-control">
+          <select class="settings-select" id="settingDefaultFormat">
+            <option value="url">URLs</option>
+            <option value="markdown">Markdown</option>
+            <option value="titled">Title + URL</option>
+            <option value="json">JSON</option>
+            <option value="notion">Notion</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Default scope</span>
+        </div>
+        <div class="setting-control">
+          <select class="settings-select" id="settingDefaultScope">
+            <option value="window">This Window</option>
+            <option value="all">All Windows</option>
+            <option value="selected">Pick Tabs</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Auto-save on export</span>
+          <span class="setting-label-hint">Save tabs as last session after generating</span>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-wrap">
+            <div class="toggle" id="settingAutoSave"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incognito settings -->
+    <div class="settings-section">
+      <div class="settings-heading">Incognito</div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Exclude incognito from export</span>
+          <span class="setting-label-hint">Always strip incognito tabs from output</span>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-wrap">
+            <div class="toggle" id="settingExcludeIncognito"></div>
+          </label>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Privacy warning on export</span>
+          <span class="setting-label-hint">Warn when incognito tabs are included</span>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-wrap">
+            <div class="toggle" id="settingIncognitoWarning"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import settings -->
+    <div class="settings-section">
+      <div class="settings-heading">Import</div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="setting-label-text">Confirm threshold</span>
+          <span class="setting-label-hint">Show confirmation when opening this many tabs</span>
+        </div>
+        <div class="setting-control">
+          <input class="settings-number" type="number" id="settingConfirmThreshold" min="1" max="100" value="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard shortcuts -->
+    <div class="settings-section">
+      <div class="settings-heading">Keyboard Shortcuts</div>
+      <div class="shortcuts-grid">
+        <span class="shortcut-key">Alt+E</span><span class="shortcut-desc">Go to Export</span>
+        <span class="shortcut-key">Alt+I</span><span class="shortcut-desc">Go to Import</span>
+        <span class="shortcut-key">Alt+S</span><span class="shortcut-desc">Go to Sessions</span>
+        <span class="shortcut-key">Alt+G</span><span class="shortcut-desc">Go to Groups</span>
+        <span class="shortcut-key">Alt+A</span><span class="shortcut-desc">Go to Analytics</span>
+        <span class="shortcut-key">Alt+,</span><span class="shortcut-desc">Go to Settings</span>
+        <span class="shortcut-key">Alt+⏎</span><span class="shortcut-desc">Generate export</span>
+        <span class="shortcut-key">Alt+C</span><span class="shortcut-desc">Copy export</span>
+        <span class="shortcut-key">Alt+O</span><span class="shortcut-desc">Open tabs (import)</span>
+        <span class="shortcut-key">Alt+U</span><span class="shortcut-desc">Undo last import</span>
+        <span class="shortcut-key">Alt+F</span><span class="shortcut-desc">Focus import filter</span>
+      </div>
+    </div>
+
+    <div class="settings-about">
+      Tabio v6.0.0 · All data stored locally · No tracking
     </div>
   </section>
 
@@ -347,16 +463,17 @@
     </div>
   </div>
 
-  <!-- ── Toast ──────────────────────────────────────────── -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/ui.js"></script>
   <script src="js/tabs.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/cleaner.js"></script>
   <script src="js/sessions.js"></script>
+  <script src="js/groups.js"></script>
   <script src="js/export.js"></script>
   <script src="js/import.js"></script>
   <script src="js/main.js"></script>

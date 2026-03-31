@@ -1,134 +1,142 @@
 /* ─────────────────────────────────────────────────────────
-   export.js  —  tabs → text, all formats + cleaning + groups
+   export.js  —  tabs → text
+   New: incognito labelling/exclusion/warning, expandable
+        window tree with per-tab selection, density insights,
+        focus mode
 ───────────────────────────────────────────────────────── */
 'use strict';
 
 const Export = (() => {
 
   // ── State ────────────────────────────────────────────────
-  let scope            = 'window';  // window | all | tabgroup | windows | selected
+  let scope            = 'window';
   let format           = 'url';
   let allTabs          = [];
   let selectedIds      = new Set();
-  let selectedGroupIds = new Set();   // for tabgroup scope
-  let selectedWinIds   = new Set();   // for windows scope
+  let selectedGroupIds = new Set();
+  let selectedWinIds   = new Set();
   let lastOutput       = '';
 
-  // ── Tab group colour map (Chrome's named colours → CSS) ──
+  // Window tree state: windowId → { expanded, selectedTabIds }
+  const _winTree = new Map();
+
+  // Focus mode: null = off, or a section label string
+  let _focusSection = null;
+
   const GROUP_COLORS = {
-    grey: '#9aa0a6', blue: '#1a73e8', red: '#ea4335',
-    yellow: '#fbbc04', green: '#34a853', pink: '#f06292',
-    purple: '#7b1fa2', cyan: '#00acc1', orange: '#ef6c00',
+    grey:'#9aa0a6', blue:'#1a73e8', red:'#ea4335',
+    yellow:'#fbbc04', green:'#34a853', pink:'#f06292',
+    purple:'#7b1fa2', cyan:'#00acc1', orange:'#ef6c00',
   };
+
+  // ── Incognito helpers ────────────────────────────────────
+
+  function _isIncognito(tab) { return tab.incognito === true; }
+
+  function _incognitoLabel() { return '[Incognito]'; }
+
+  function _shouldExcludeIncognito() {
+    return Settings.get('excludeIncognito') === true;
+  }
 
   // ── Formatters ───────────────────────────────────────────
 
-  // Per-tab formatters (receive one tab, return one string)
-  // Special URLs (file://, chrome://, edge://, etc.) are preserved as-is.
+  function _safeTitle(tab) {
+    const base  = (tab.title || 'Untitled').replace(/[\[\]]/g, '').trim();
+    const label = _isIncognito(tab) ? `${_incognitoLabel()} ${base}` : base;
+    return label;
+  }
+
+  function _isSpecialUrl(url) {
+    if (!url) return false;
+    return !url.startsWith('http://') && !url.startsWith('https://');
+  }
+
   const TAB_FORMATTERS = {
     url:      t => t.url,
     markdown: t => _isSpecialUrl(t.url)
-                     ? `${_safeTitle(t.title)}: ${t.url}`
-                     : `[${_safeTitle(t.title)}](${t.url})`,
-    titled:   t => `${_safeTitle(t.title)}: ${t.url}`,
+                     ? `${_safeTitle(t)}: ${t.url}`
+                     : `[${_safeTitle(t)}](${t.url})`,
+    titled:   t => `${_safeTitle(t)}: ${t.url}`,
     notion:   t => _isSpecialUrl(t.url)
-                     ? `- ${_safeTitle(t.title)}: ${t.url}`
-                     : `- [${_safeTitle(t.title)}](${t.url})`,
+                     ? `- ${_safeTitle(t)}: ${t.url}`
+                     : `- [${_safeTitle(t)}](${t.url})`,
   };
 
-  // Bulk formatters (receive full tab array, return full string)
   const BULK_FORMATTERS = {
     json: tabs => JSON.stringify(
       tabs.map(t => {
         const entry = { title: t.title || '', url: t.url };
-        if (_isSpecialUrl(t.url)) entry.urlType = t.url.split('://')[0] || t.url.split(':')[0];
+        if (_isIncognito(t))     entry.incognito = true;
+        if (_isSpecialUrl(t.url)) entry.urlType  = t.url.split('://')[0] || t.url.split(':')[0];
         return entry;
       }),
       null, 2
     ),
   };
 
-  function _safeTitle(title) {
-    return (title || 'Untitled').replace(/[\[\]]/g, '').trim();
-  }
+  function _isBulk(fmt)      { return fmt in BULK_FORMATTERS; }
+  function _esc(s)           { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  /** Returns true for URLs that can't be wrapped in Markdown links cleanly */
-  function _isSpecialUrl(url) {
-    if (!url) return false;
-    return !url.startsWith('http://') && !url.startsWith('https://');
-  }
-
-  function _isBulk(fmt) { return fmt in BULK_FORMATTERS; }
-
-  // Format a flat array of tabs into a string
   function _formatFlat(tabs, fmt) {
     if (_isBulk(fmt)) return BULK_FORMATTERS[fmt](tabs);
     return tabs.map(t => TAB_FORMATTERS[fmt]?.(t) ?? t.url).join('\n');
   }
 
-  // ── Section header helpers ───────────────────────────────
+  // ── Headers ──────────────────────────────────────────────
 
-  function _groupHeader(name, color, count) {
-    const colorName = color || 'grey';
-    const dot = `[${colorName.toUpperCase()}]`;
-    return `${dot} ${name || 'Unnamed Group'} (${count} tab${count !== 1 ? 's' : ''})`;
+  function _groupHeader(name, color, count, incognito) {
+    const dot   = `[${(color || 'grey').toUpperCase()}]`;
+    const priv  = incognito ? ` ${_incognitoLabel()}` : '';
+    return `${dot}${priv} ${name || 'Unnamed Group'} (${count} tab${count !== 1 ? 's' : ''})`;
   }
 
-  function _windowHeader(windowIndex, isCurrent, tabCount) {
-    const label = isCurrent ? `Window ${windowIndex} (current)` : `Window ${windowIndex}`;
-    return `── ${label} · ${tabCount} tab${tabCount !== 1 ? 's' : ''} ──`;
+  function _windowHeader(windowIndex, isCurrent, tabCount, incognito) {
+    const label   = isCurrent ? `Window ${windowIndex} (current)` : `Window ${windowIndex}`;
+    const privTag = incognito ? ` · ${_incognitoLabel()}` : '';
+    return `── ${label}${privTag} · ${tabCount} tab${tabCount !== 1 ? 's' : ''} ──`;
   }
 
-  function _domainHeader(domain, count) {
-    return `── ${domain} (${count}) ──`;
+  function _domainHeader(domain, count) { return `── ${domain} (${count}) ──`; }
+
+  // ── Build output ─────────────────────────────────────────
+
+  function _applyIncognitoFilter(tabs) {
+    return _shouldExcludeIncognito() ? tabs.filter(t => !_isIncognito(t)) : tabs;
   }
 
-  function _divider() { return ''; }  // blank line between sections
-
-  // ── Build output for different scope structures ──────────
-
-  /**
-   * Build output from a flat tab array (window / all / selected scopes).
-   * Cleaning (dedupe, stripUtm, sort, groupByDomain) applied here.
-   */
   function _buildFlatOutput(tabs, fmt) {
-    const cleaned = Cleaner.apply(tabs, _cleanOptions());
-
+    const filtered = _applyIncognitoFilter(tabs);
+    const cleaned  = Cleaner.apply(filtered, _cleanOptions());
     if (cleaned.grouped) {
-      // Group-by-domain mode
       return cleaned.groups.map(({ domain, tabs: gt }) =>
         [_domainHeader(domain, gt.length), _formatFlat(gt, fmt)].join('\n')
       ).join('\n\n');
     }
-
     return _formatFlat(cleaned.tabs, fmt);
   }
 
-  /**
-   * Build output preserving tab group structure.
-   * groups: [{ groupId, title, color, tabs[] }]
-   * ungroupedTabs: []
-   */
-  function _buildGroupOutput(groups, ungroupedTabs, fmt) {
+  function _buildGroupOutput(groups, ungroupedTabs, fmt, windowIncognito = false) {
     const sections = [];
-
     groups.forEach(g => {
-      const cleanedResult = Cleaner.apply(g.tabs, _cleanOptions());
-      const tabs = cleanedResult.grouped
-        ? cleanedResult.groups.flatMap(x => x.tabs)
-        : cleanedResult.tabs;
+      const filtered = _applyIncognitoFilter(g.tabs);
+      const cleaned  = Cleaner.apply(filtered, _cleanOptions());
+      const tabs     = cleaned.grouped ? cleaned.groups.flatMap(x => x.tabs) : cleaned.tabs;
       if (tabs.length === 0) return;
-      sections.push(_groupHeader(g.title, g.color, tabs.length));
+
+      // Focus mode: skip sections not in focus
+      if (_focusSection && g.title !== _focusSection) return;
+
+      sections.push(_groupHeader(g.title, g.color, tabs.length, windowIncognito || tabs.some(_isIncognito)));
       sections.push(_formatFlat(tabs, fmt));
-      sections.push(_divider());
+      sections.push('');
     });
 
     if (ungroupedTabs.length > 0) {
-      const cleanedResult = Cleaner.apply(ungroupedTabs, _cleanOptions());
-      const tabs = cleanedResult.grouped
-        ? cleanedResult.groups.flatMap(x => x.tabs)
-        : cleanedResult.tabs;
-      if (tabs.length > 0) {
+      const filtered = _applyIncognitoFilter(ungroupedTabs);
+      const cleaned  = Cleaner.apply(filtered, _cleanOptions());
+      const tabs     = cleaned.grouped ? cleaned.groups.flatMap(x => x.tabs) : cleaned.tabs;
+      if (tabs.length > 0 && (!_focusSection || _focusSection === 'Ungrouped')) {
         sections.push('── Ungrouped ──');
         sections.push(_formatFlat(tabs, fmt));
       }
@@ -137,19 +145,13 @@ const Export = (() => {
     return sections.join('\n').trim();
   }
 
-  /**
-   * Build output preserving window structure.
-   * windows: [{ windowId, windowIndex, isCurrent, groups[], ungroupedTabs[] }]
-   */
   function _buildWindowOutput(windows, fmt) {
     return windows.map(win => {
-      const winHeader = _windowHeader(win.windowIndex, win.isCurrent, win.totalTabs);
-      const body      = _buildGroupOutput(win.groups, win.ungroupedTabs, fmt);
+      const winHeader = _windowHeader(win.windowIndex, win.isCurrent, win.totalTabs, win.incognito);
+      const body      = _buildGroupOutput(win.groups, win.ungroupedTabs, fmt, win.incognito);
       return [winHeader, body].filter(Boolean).join('\n');
     }).join('\n\n');
   }
-
-  // ── Clean options ────────────────────────────────────────
 
   function _cleanOptions() {
     return {
@@ -160,42 +162,41 @@ const Export = (() => {
     };
   }
 
-  // ── Get tabs by scope ────────────────────────────────────
+  // ── Get content by scope ─────────────────────────────────
 
   async function _getContent() {
-    // Returns { type: 'flat'|'groups'|'windows', ... }
-
     if (scope === 'window') {
       const tabs = TabsAPI.filterExportable(await TabsAPI.getCurrentWindowTabs());
       return { type: 'flat', tabs };
     }
-
     if (scope === 'all') {
       const tabs = TabsAPI.filterExportable(await TabsAPI.getAllTabs());
       return { type: 'flat', tabs };
     }
-
     if (scope === 'selected') {
-      const tabs = TabsAPI.filterExportable(allTabs.filter(t => selectedIds.has(t.id)));
+      // Gather from window tree if it's been rendered, otherwise fall back to allTabs
+      let tabs;
+      if (_winTree.size > 0) {
+        // Collect selected tab IDs from all windows in the tree
+        const treeSelectedIds = new Set();
+        _winTree.forEach(ws => ws.selectedTabIds.forEach(id => treeSelectedIds.add(id)));
+        tabs = TabsAPI.filterExportable(allTabs.filter(t => treeSelectedIds.has(t.id)));
+      } else {
+        tabs = TabsAPI.filterExportable(allTabs.filter(t => selectedIds.has(t.id)));
+      }
       return { type: 'flat', tabs };
     }
-
     if (scope === 'tabgroup') {
-      // Get windows with groups, filter to selected group ids
-      const windows = await TabsAPI.getWindowsWithGroups();
+      const windows   = await TabsAPI.getWindowsWithGroups();
       const allGroups = windows.flatMap(w => w.groups);
       const selected  = allGroups.filter(g => selectedGroupIds.has(g.id));
-
       if (selected.length === 0) {
-        // No groups selected — export all groups from current window
         const curWin = windows.find(w => w.isCurrent);
         if (!curWin) return { type: 'flat', tabs: [] };
         return { type: 'groups', groups: curWin.groups, ungroupedTabs: [] };
       }
-
       return { type: 'groups', groups: selected, ungroupedTabs: [] };
     }
-
     if (scope === 'windows') {
       const allWindows = await TabsAPI.getWindowsWithGroups();
       const selected   = selectedWinIds.size > 0
@@ -203,8 +204,34 @@ const Export = (() => {
         : allWindows;
       return { type: 'windows', windows: selected };
     }
-
     return { type: 'flat', tabs: [] };
+  }
+
+  // ── Density insights ─────────────────────────────────────
+
+  function _computeDensityInsights(tabs) {
+    const urlCounts = {};
+    tabs.forEach(t => { urlCounts[t.url] = (urlCounts[t.url] || 0) + 1; });
+    const dupes   = Object.values(urlCounts).filter(n => n > 1).reduce((s, n) => s + n - 1, 0);
+    const incog   = tabs.filter(_isIncognito).length;
+    const special = tabs.filter(t => _isSpecialUrl(t.url)).length;
+    return { total: tabs.length, dupes, incog, special };
+  }
+
+  function _renderDensityInsights(insights) {
+    const el = document.getElementById('densityInsights');
+    if (!el) return;
+    const parts = [];
+    if (insights.dupes > 0)   parts.push(`<span class="density-chip chip-warn">${insights.dupes} duplicate${insights.dupes !== 1 ? 's' : ''}</span>`);
+    if (insights.incog > 0)   parts.push(`<span class="density-chip chip-incog">🕵 ${insights.incog} incognito</span>`);
+    if (insights.special > 0) parts.push(`<span class="density-chip chip-special">${insights.special} internal</span>`);
+    if (parts.length === 0)   parts.push(`<span class="density-chip chip-ok">✓ ${insights.total} tabs</span>`);
+    el.innerHTML = parts.join('');
+    el.hidden = false;
+
+    // Privacy warning
+    const warn = document.getElementById('incognitoWarning');
+    if (warn) warn.hidden = (insights.incog === 0);
   }
 
   // ── Generate ─────────────────────────────────────────────
@@ -212,38 +239,31 @@ const Export = (() => {
   async function generate() {
     const content = await _getContent();
     let output = '';
-    let flatTabsForAnalytics = [];
+    let flatTabs = [];
 
     if (content.type === 'flat') {
       if (content.tabs.length === 0) { showToast('No valid tabs found!'); return null; }
-      output = _buildFlatOutput(content.tabs, format);
-      flatTabsForAnalytics = content.tabs;
+      flatTabs = content.tabs;
+      output   = _buildFlatOutput(flatTabs, format);
 
     } else if (content.type === 'groups') {
-      const allGroupTabs = [
-        ...content.groups.flatMap(g => g.tabs),
-        ...content.ungroupedTabs,
-      ];
-      if (allGroupTabs.length === 0) { showToast('No tabs in selected groups!'); return null; }
-      output = _buildGroupOutput(content.groups, content.ungroupedTabs, format);
-      flatTabsForAnalytics = allGroupTabs;
+      flatTabs = [...content.groups.flatMap(g => g.tabs), ...content.ungroupedTabs];
+      if (flatTabs.length === 0) { showToast('No tabs in selected groups!'); return null; }
+      output   = _buildGroupOutput(content.groups, content.ungroupedTabs, format);
 
     } else if (content.type === 'windows') {
-      const allWinTabs = content.windows.flatMap(w => [
-        ...w.groups.flatMap(g => g.tabs),
-        ...w.ungroupedTabs,
-      ]);
-      if (allWinTabs.length === 0) { showToast('No valid tabs found!'); return null; }
-      output = _buildWindowOutput(content.windows, format);
-      flatTabsForAnalytics = allWinTabs;
+      flatTabs = content.windows.flatMap(w => [...w.groups.flatMap(g => g.tabs), ...w.ungroupedTabs]);
+      if (flatTabs.length === 0) { showToast('No valid tabs found!'); return null; }
+      output   = _buildWindowOutput(content.windows, format);
     }
+
+    _renderDensityInsights(_computeDensityInsights(flatTabs));
 
     lastOutput = output;
     document.getElementById('outputBox').textContent = output;
-    await Analytics.recordExport(flatTabsForAnalytics);
-    // Auto-save as last session for quick restore
-    await Sessions.saveLastSession(flatTabsForAnalytics);
-    return flatTabsForAnalytics;
+    await Analytics.recordExport(flatTabs);
+    await Sessions.saveLastSession(flatTabs);
+    return flatTabs;
   }
 
   // ── Copy / Download ──────────────────────────────────────
@@ -267,63 +287,15 @@ const Export = (() => {
     const mime = format === 'json' ? 'application/json' : 'text/plain';
     const name = `tabio-export-${new Date().toISOString().slice(0,10)}.${ext}`;
     const a    = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([lastOutput], { type: mime })),
-      download: name,
+      href: URL.createObjectURL(new Blob([lastOutput], { type: mime })), download: name,
     });
     a.click(); URL.revokeObjectURL(a.href);
     showToast(`Downloaded ${name}`);
   }
 
-  // ── Tab group picker ─────────────────────────────────────
+  // ── Expandable window tree (By Window scope) ─────────────
 
-  async function _renderTabGroupPicker() {
-    const container = document.getElementById('tabGroupPicker');
-    const windows   = await TabsAPI.getWindowsWithGroups();
-    const allGroups = windows.flatMap(w =>
-      w.groups.map(g => ({ ...g, windowIndex: w.windowIndex, isCurrent: w.isCurrent }))
-    );
-
-    if (allGroups.length === 0) {
-      container.innerHTML = '<span class="scope-sub-hint">No tab groups found in any window.</span>';
-      return;
-    }
-
-    // Default: select all
-    allGroups.forEach(g => selectedGroupIds.add(g.id));
-    container.innerHTML = '';
-
-    allGroups.forEach(g => {
-      const item = document.createElement('div');
-      item.className = 'group-picker-item checked';
-      item.dataset.id = g.id;
-
-      const colorHex = GROUP_COLORS[g.color] || GROUP_COLORS.grey;
-      const winLabel = g.isCurrent ? '(this window)' : `Window ${g.windowIndex}`;
-
-      item.innerHTML = `
-        <div class="group-picker-check"></div>
-        <div class="group-color-dot" style="background:${colorHex}"></div>
-        <span class="group-picker-name">${_esc(g.title || 'Unnamed Group')} <span style="font-weight:400;color:var(--text-hint)">${winLabel}</span></span>
-        <span class="group-picker-count">${g.tabs.length} tab${g.tabs.length !== 1 ? 's' : ''}</span>
-      `;
-
-      item.addEventListener('click', () => {
-        if (selectedGroupIds.has(g.id)) {
-          selectedGroupIds.delete(g.id);
-          item.classList.remove('checked');
-        } else {
-          selectedGroupIds.add(g.id);
-          item.classList.add('checked');
-        }
-      });
-
-      container.appendChild(item);
-    });
-  }
-
-  // ── Window picker ────────────────────────────────────────
-
-  async function _renderWindowPicker() {
+  async function _renderWindowTree() {
     const container = document.getElementById('windowPicker');
     const windows   = await TabsAPI.getWindowsWithGroups();
 
@@ -332,35 +304,164 @@ const Export = (() => {
       return;
     }
 
-    // Default: select all
-    windows.forEach(w => selectedWinIds.add(w.windowId));
+    // Init tree state
+    windows.forEach(w => {
+      if (!_winTree.has(w.windowId)) {
+        _winTree.set(w.windowId, {
+          expanded:       w.isCurrent,
+          selectedTabIds: new Set(w.groups.flatMap(g => g.tabs).concat(w.ungroupedTabs).map(t => t.id)),
+          selected:       true,
+        });
+      }
+      selectedWinIds.add(w.windowId);
+    });
+
+    _drawWindowTree(windows);
+  }
+
+  function _drawWindowTree(windows) {
+    const container = document.getElementById('windowPicker');
     container.innerHTML = '';
 
     windows.forEach(w => {
-      const item = document.createElement('div');
-      item.className = 'group-picker-item checked';
-      item.dataset.id = w.windowId;
+      const state = _winTree.get(w.windowId);
+      const allTabs  = [...w.groups.flatMap(g => g.tabs), ...w.ungroupedTabs];
+      const selCount = allTabs.filter(t => state.selectedTabIds.has(t.id)).length;
+      const incogTag = w.incognito
+        ? `<span class="incog-badge">🕵 Incognito</span>` : '';
+      const winLabel = w.isCurrent ? 'Window (current)' : `Window ${w.windowIndex}`;
 
-      const groupCount = w.groups.length;
-      const label = w.isCurrent ? 'Window (current)' : `Window ${w.windowIndex}`;
-      const sub   = groupCount > 0
-        ? `${w.totalTabs} tabs · ${groupCount} group${groupCount !== 1 ? 's' : ''}`
-        : `${w.totalTabs} tabs`;
+      // Window row
+      const winRow = document.createElement('div');
+      winRow.className = 'win-tree-row';
+      winRow.innerHTML = `
+        <div class="win-tree-header ${state.selected ? 'checked' : ''}" data-winid="${w.windowId}">
+          <div class="win-tree-left">
+            <div class="group-picker-check"></div>
+            <span class="win-expand-chevron ${state.expanded ? 'expanded' : ''}">▶</span>
+            <span class="win-tree-label">${_esc(winLabel)}${incogTag}</span>
+          </div>
+          <span class="win-tree-count">${selCount}/${allTabs.length}</span>
+        </div>
+      `;
+
+      // Checkbox toggle (whole window)
+      winRow.querySelector('.win-tree-header').addEventListener('click', (e) => {
+        if (e.target.closest('.win-expand-chevron')) return; // handled below
+        state.selected = !state.selected;
+        if (state.selected) allTabs.forEach(t => state.selectedTabIds.add(t.id));
+        else                state.selectedTabIds.clear();
+        selectedWinIds[state.selected ? 'add' : 'delete'](w.windowId);
+        _drawWindowTree(windows);
+      });
+
+      // Chevron toggle expand/collapse
+      winRow.querySelector('.win-expand-chevron').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.expanded = !state.expanded;
+        _drawWindowTree(windows);
+      });
+
+      // Tab list (shown when expanded)
+      if (state.expanded) {
+        const tabList = document.createElement('div');
+        tabList.className = 'win-tree-tabs';
+
+        // Render groups first
+        w.groups.forEach(g => {
+          const colorHex = GROUP_COLORS[g.color] || GROUP_COLORS.grey;
+          const grpHeader = document.createElement('div');
+          grpHeader.className = 'win-tree-group-label';
+          grpHeader.innerHTML = `<span class="group-color-dot" style="background:${colorHex}"></span>${_esc(g.title || 'Unnamed Group')}`;
+          tabList.appendChild(grpHeader);
+          g.tabs.forEach(t => tabList.appendChild(_buildTabRow(t, state, w, windows)));
+        });
+
+        // Ungrouped tabs
+        if (w.ungroupedTabs.length > 0) {
+          if (w.groups.length > 0) {
+            const sep = document.createElement('div');
+            sep.className = 'win-tree-group-label';
+            sep.textContent = 'Ungrouped';
+            tabList.appendChild(sep);
+          }
+          w.ungroupedTabs.forEach(t => tabList.appendChild(_buildTabRow(t, state, w, windows)));
+        }
+
+        winRow.appendChild(tabList);
+      }
+
+      container.appendChild(winRow);
+    });
+  }
+
+  function _buildTabRow(tab, state, win, windows) {
+    const row      = document.createElement('div');
+    const checked  = state.selectedTabIds.has(tab.id);
+    row.className  = 'win-tree-tab-row';
+
+    const incogIcon = _isIncognito(tab) ? `<span class="tab-incog-icon" title="Incognito">🕵</span>` : '';
+    const favicon   = (tab.favIconUrl && tab.favIconUrl.startsWith('http'))
+      ? `<img class="tab-favicon" src="${_esc(tab.favIconUrl)}" onerror="this.style.display='none'">`
+      : `<div class="tab-favicon-fallback"></div>`;
+
+    row.innerHTML = `
+      <div class="tab-checkbox ${checked ? 'checked' : ''}"></div>
+      ${favicon}
+      ${incogIcon}
+      <div class="tab-info">
+        <div class="tab-title">${_esc(tab.title || '(untitled)')}</div>
+        <div class="tab-url">${_esc(tab.url || '')}</div>
+      </div>
+    `;
+
+    row.addEventListener('click', () => {
+      if (state.selectedTabIds.has(tab.id)) state.selectedTabIds.delete(tab.id);
+      else state.selectedTabIds.add(tab.id);
+      _drawWindowTree(windows);
+    });
+
+    return row;
+  }
+
+  // ── Tab group picker ─────────────────────────────────────
+
+  async function _renderTabGroupPicker() {
+    const container = document.getElementById('tabGroupPicker');
+    const windows   = await TabsAPI.getWindowsWithGroups();
+    const allGroups = windows.flatMap(w =>
+      w.groups.map(g => ({ ...g, windowIndex: w.windowIndex, isCurrent: w.isCurrent, winIncognito: w.incognito }))
+    );
+
+    if (allGroups.length === 0) {
+      container.innerHTML = '<span class="scope-sub-hint">No tab groups found in any window.</span>';
+      return;
+    }
+
+    allGroups.forEach(g => selectedGroupIds.add(g.id));
+    container.innerHTML = '';
+
+    allGroups.forEach(g => {
+      const item      = document.createElement('div');
+      item.className  = 'group-picker-item checked';
+      item.dataset.id = g.id;
+
+      const colorHex = GROUP_COLORS[g.color] || GROUP_COLORS.grey;
+      const winLabel = g.isCurrent ? '(this window)' : `Window ${g.windowIndex}`;
+      const incogBadge = g.winIncognito ? ` <span class="incog-badge">🕵</span>` : '';
 
       item.innerHTML = `
         <div class="group-picker-check"></div>
-        <span class="group-picker-name">${_esc(label)}</span>
-        <span class="group-picker-count">${sub}</span>
+        <div class="group-color-dot" style="background:${colorHex}"></div>
+        <span class="group-picker-name">${_esc(g.title || 'Unnamed Group')}${incogBadge}
+          <span style="font-weight:400;color:var(--text-hint)">${winLabel}</span>
+        </span>
+        <span class="group-picker-count">${g.tabs.length} tab${g.tabs.length !== 1 ? 's' : ''}</span>
       `;
 
       item.addEventListener('click', () => {
-        if (selectedWinIds.has(w.windowId)) {
-          selectedWinIds.delete(w.windowId);
-          item.classList.remove('checked');
-        } else {
-          selectedWinIds.add(w.windowId);
-          item.classList.add('checked');
-        }
+        if (selectedGroupIds.has(g.id)) { selectedGroupIds.delete(g.id); item.classList.remove('checked'); }
+        else                            { selectedGroupIds.add(g.id);    item.classList.add('checked'); }
       });
 
       container.appendChild(item);
@@ -385,6 +486,10 @@ const Export = (() => {
         _updatePickerHeader();
       });
 
+      const incogIcon = _isIncognito(tab)
+        ? Object.assign(document.createElement('span'), { className: 'tab-incog-icon', title: 'Incognito', textContent: '🕵' })
+        : null;
+
       const info = document.createElement('div');
       info.className = 'tab-info';
       info.innerHTML = `
@@ -392,7 +497,10 @@ const Export = (() => {
         <div class="tab-url">${_esc(tab.url || '')}</div>
       `;
 
-      item.append(checkbox, _buildFavicon(tab), info);
+      const parts = [checkbox, _buildFavicon(tab)];
+      if (incogIcon) parts.push(incogIcon);
+      parts.push(info);
+      item.append(...parts);
       list.appendChild(item);
     });
 
@@ -407,10 +515,7 @@ const Export = (() => {
     }
     return _fallbackFavicon();
   }
-
-  function _fallbackFavicon() {
-    return Object.assign(document.createElement('div'), { className: 'tab-favicon-fallback' });
-  }
+  function _fallbackFavicon() { return Object.assign(document.createElement('div'), { className: 'tab-favicon-fallback' }); }
 
   function _updatePickerHeader() {
     const count = selectedIds.size;
@@ -430,16 +535,30 @@ const Export = (() => {
     document.getElementById('scopeSubTabGroup').hidden = (newScope !== 'tabgroup');
     document.getElementById('scopeSubWindows').hidden  = (newScope !== 'windows');
     document.getElementById('tabPickerWrap').hidden    = (newScope !== 'selected');
+    document.getElementById('focusModeRow').hidden     = !['window','all','selected'].includes(newScope);
 
     if (newScope === 'tabgroup') _renderTabGroupPicker();
-    if (newScope === 'windows')  _renderWindowPicker();
+    if (newScope === 'windows')  _renderWindowTree();
     if (newScope === 'selected') _renderTabPicker();
   }
 
-  // ── Helpers ──────────────────────────────────────────────
+  // ── Focus mode ───────────────────────────────────────────
 
-  function _esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  async function _renderFocusOptions() {
+    const select = document.getElementById('focusModeSelect');
+    if (!select) return;
+
+    const windows = await TabsAPI.getWindowsWithGroups();
+    const groups  = windows.flatMap(w => w.groups.map(g => g.title || 'Unnamed Group'));
+    const unique  = [...new Set(groups)];
+
+    select.innerHTML = `<option value="">Off — show all</option>` +
+      unique.map(g => `<option value="${_esc(g)}">${_esc(g)}</option>`).join('');
+
+    select.value = _focusSection || '';
+    select.addEventListener('change', () => {
+      _focusSection = select.value || null;
+    });
   }
 
   // ── Init ─────────────────────────────────────────────────
@@ -448,22 +567,25 @@ const Export = (() => {
     allTabs = await TabsAPI.getCurrentWindowTabs();
     allTabs.forEach(t => selectedIds.add(t.id));
 
-    // Scope buttons
     bindScopeButtons(
       ['scopeWindow','scopeAll','scopeTabGroup','scopeWindows','scopeSelected'],
       s => { scope = s; _showScopeSub(s); }
     );
 
-    // Format chips
     bindChips(['fmtUrl','fmtMarkdown','fmtTitled','fmtJson','fmtNotion'], f => { format = f; });
 
-    // Clean chip-toggles — wire each one (they self-toggle via CSS, generate reads them live)
     ['cleanDedupe','cleanUtm','cleanSort','cleanGroup'].forEach(id => bindChipToggle(id));
+
+    // Incognito exclusion chip
+    bindChipToggle('cleanIncognito');
 
     document.getElementById('selectAllBtn').addEventListener('click', _toggleSelectAll);
     document.getElementById('btnGenerate').addEventListener('click', generate);
     document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
     document.getElementById('btnDownload').addEventListener('click', downloadFile);
+
+    // Focus mode
+    await _renderFocusOptions();
   }
 
   return { init, generate, copyToClipboard };

@@ -381,9 +381,13 @@ const Import = (() => {
       // Capture newly opened tab IDs for undo
       const _origCreate = chrome.tabs.create.bind(chrome.tabs);
 
+      const useIncognito = getToggle('toggleIncognito');
+      const useMixedMode = getToggle('toggleMixedMode');
+
       if (perWindow && sections.length > 1) {
         for (const sec of sections) {
-          const win = await chrome.windows.create({ url: sec.urls[0], focused: false });
+          const secIncognito = useIncognito || (useMixedMode && sec.label && sec.label.includes('Incognito'));
+          const win = await chrome.windows.create({ url: sec.urls[0], focused: false, ...(secIncognito && { incognito: true }) });
           newTabIds.push(...(win.tabs || []).map(t => t.id));
           for (let i = 1; i < sec.urls.length; i++) {
             const t = await _origCreate({ windowId: win.id, url: sec.urls[i], active: false });
@@ -392,8 +396,10 @@ const Import = (() => {
         }
       } else {
         const allUrls = sections.flatMap(s => s.urls);
-        if (useNewWin) {
-          const win = await chrome.windows.create({ url: allUrls[0], focused: true });
+        if (useNewWin || useIncognito) {
+          const winOpts = { url: allUrls[0], focused: true };
+          if (useIncognito) winOpts.incognito = true;
+          const win = await chrome.windows.create(winOpts);
           newTabIds.push(...(win.tabs || []).map(t => t.id));
           for (let i = 1; i < allUrls.length; i++) {
             const t = await _origCreate({ windowId: win.id, url: allUrls[i], active: false });
@@ -533,9 +539,13 @@ const Import = (() => {
 
   function init() {
     initToggle('toggleNewWindow');
+    initToggle('toggleIncognito');
+    initToggle('toggleMixedMode');
     initToggle('toggleCloseExisting');
     initToggle('togglePerWindow');
     bindToggle('toggleNewWindow');
+    bindToggle('toggleIncognito');
+    bindToggle('toggleMixedMode');
     bindToggle('toggleCloseExisting');
     bindToggle('togglePerWindow');
 
