@@ -199,9 +199,7 @@ const Export = (() => {
     }
     if (scope === 'windows') {
       const allWindows = await TabsAPI.getWindowsWithGroups();
-      const selected   = selectedWinIds.size > 0
-        ? allWindows.filter(w => selectedWinIds.has(w.windowId))
-        : allWindows;
+      const selected   = allWindows.filter(w => selectedWinIds.has(w.windowId));
       return { type: 'windows', windows: selected };
     }
     return { type: 'flat', tabs: [] };
@@ -305,15 +303,19 @@ const Export = (() => {
     }
 
     // Init tree state
+    selectedWinIds.clear();
     windows.forEach(w => {
       if (!_winTree.has(w.windowId)) {
         _winTree.set(w.windowId, {
           expanded:       w.isCurrent,
           selectedTabIds: new Set(w.groups.flatMap(g => g.tabs).concat(w.ungroupedTabs).map(t => t.id)),
-          selected:       true,
+          selected:       false,
+          groupName:      '',
         });
       }
-      selectedWinIds.add(w.windowId);
+      if (_winTree.get(w.windowId)?.selected) {
+        selectedWinIds.add(w.windowId);
+      }
     });
 
     _drawWindowTree(windows);
@@ -324,43 +326,60 @@ const Export = (() => {
     container.innerHTML = '';
 
     windows.forEach(w => {
-      const state = _winTree.get(w.windowId);
-      const allTabs  = [...w.groups.flatMap(g => g.tabs), ...w.ungroupedTabs];
-      const selCount = allTabs.filter(t => state.selectedTabIds.has(t.id)).length;
-      const incogTag = w.incognito
-        ? `<span class="incog-badge">🕵 Incognito</span>` : '';
-      const winLabel = w.isCurrent ? 'Window (current)' : `Window ${w.windowIndex}`;
+      const state    = _winTree.get(w.windowId);
+      const allWinTabs = [...w.groups.flatMap(g => g.tabs), ...w.ungroupedTabs];
+      const selCount = allWinTabs.filter(t => state.selectedTabIds.has(t.id)).length;
+      const incogTag = w.incognito ? ` · 🕵` : '';
+      const winLabel = w.isCurrent ? `Window (current)${incogTag}` : `Window ${w.windowIndex}${incogTag}`;
 
-      // Window row
       const winRow = document.createElement('div');
       winRow.className = 'win-tree-row';
-      winRow.innerHTML = `
-        <div class="win-tree-header ${state.selected ? 'checked' : ''}" data-winid="${w.windowId}">
-          <div class="win-tree-left">
-            <div class="group-picker-check"></div>
-            <span class="win-expand-chevron ${state.expanded ? 'expanded' : ''}">▶</span>
-            <span class="win-tree-label">${_esc(winLabel)}${incogTag}</span>
-          </div>
-          <span class="win-tree-count">${selCount}/${allTabs.length}</span>
+
+      // Header row — checkbox + chevron + label + optional group-name input + count
+      const header = document.createElement('div');
+      header.className = `win-tree-header ${state.selected ? 'checked' : ''}`;
+      header.dataset.winid = w.windowId;
+
+      header.innerHTML = `
+        <div class="win-tree-left">
+          <div class="group-picker-check"></div>
+          <span class="win-expand-chevron ${state.expanded ? 'expanded' : ''}">▶</span>
+          <span class="win-tree-label">${_esc(winLabel)}</span>
+        </div>
+        <div class="win-tree-right">
+          <input class="win-group-name-input" type="text"
+            placeholder="Name → create group"
+            title="Type a name and press Enter to group selected tabs into a Chrome tab group"
+            value="${_esc(state.groupName || '')}">
+          <span class="win-tree-count">${selCount}/${allWinTabs.length}</span>
         </div>
       `;
 
-      // Checkbox toggle (whole window)
-      winRow.querySelector('.win-tree-header').addEventListener('click', (e) => {
-        if (e.target.closest('.win-expand-chevron')) return; // handled below
+      // Checkbox: click anywhere on header except the chevron or name input
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.win-expand-chevron') || e.target.closest('.win-group-name-input')) return;
         state.selected = !state.selected;
-        if (state.selected) allTabs.forEach(t => state.selectedTabIds.add(t.id));
+        if (state.selected) allWinTabs.forEach(t => state.selectedTabIds.add(t.id));
         else                state.selectedTabIds.clear();
         selectedWinIds[state.selected ? 'add' : 'delete'](w.windowId);
         _drawWindowTree(windows);
       });
 
-      // Chevron toggle expand/collapse
-      winRow.querySelector('.win-expand-chevron').addEventListener('click', (e) => {
+      // Chevron expand/collapse
+      header.querySelector('.win-expand-chevron').addEventListener('click', (e) => {
         e.stopPropagation();
         state.expanded = !state.expanded;
         _drawWindowTree(windows);
       });
+
+      // Group name input — save name on input, create group on Enter or blur
+      const nameInput = header.querySelector('.win-group-name-input');
+      nameInput.addEventListener('input', e => { state.groupName = e.target.value; });
+      nameInput.addEventListener('keydown', async e => {
+        if (e.key === 'Enter') { e.preventDefault(); await _createGroupFromWindow(w, state, windows); }
+      });
+
+      winRow.appendChild(header);
 
       // Tab list (shown when expanded)
       if (state.expanded) {
@@ -402,7 +421,7 @@ const Export = (() => {
 
     const incogIcon = _isIncognito(tab) ? `<span class="tab-incog-icon" title="Incognito">🕵</span>` : '';
     const favicon   = (tab.favIconUrl && tab.favIconUrl.startsWith('http'))
-      ? `<img class="tab-favicon" src="${_esc(tab.favIconUrl)}" onerror="this.style.display='none'">`
+      ? `<img class="tab-favicon" src="${_esc(tab.favIconUrl)}">`
       : `<div class="tab-favicon-fallback"></div>`;
 
     row.innerHTML = `
@@ -415,6 +434,9 @@ const Export = (() => {
       </div>
     `;
 
+    const faviconImg = row.querySelector('.tab-favicon');
+    if (faviconImg) faviconImg.onerror = () => faviconImg.replaceWith(_fallbackFavicon());
+
     row.addEventListener('click', () => {
       if (state.selectedTabIds.has(tab.id)) state.selectedTabIds.delete(tab.id);
       else state.selectedTabIds.add(tab.id);
@@ -422,6 +444,28 @@ const Export = (() => {
     });
 
     return row;
+  }
+
+  // ── Create tab group from window name input ─────────────
+
+  async function _createGroupFromWindow(win, state, windows) {
+    const name   = (state.groupName || '').trim();
+    if (!name) return;
+
+    const allWinTabs = [...win.groups.flatMap(g => g.tabs), ...win.ungroupedTabs];
+    const tabIds     = allWinTabs.filter(t => state.selectedTabIds.has(t.id)).map(t => t.id);
+
+    if (tabIds.length === 0) { showToast('Select at least one tab first'); return; }
+
+    const groupId = await TabsAPI.createGroup(tabIds, name, 'blue');
+    if (groupId) {
+      showToast(`✓ Created group "${name}" (${tabIds.length} tab${tabIds.length !== 1 ? 's' : ''})`);
+      state.groupName = '';
+      const fresh = await TabsAPI.getWindowsWithGroups();
+      _drawWindowTree(fresh);
+    } else {
+      showToast('Could not create group — check permissions');
+    }
   }
 
   // ── Tab group picker ─────────────────────────────────────
@@ -532,6 +576,7 @@ const Export = (() => {
   // ── Scope sub-panel visibility ───────────────────────────
 
   function _showScopeSub(newScope) {
+    scope = newScope;
     document.getElementById('scopeSubTabGroup').hidden = (newScope !== 'tabgroup');
     document.getElementById('scopeSubWindows').hidden  = (newScope !== 'windows');
     document.getElementById('tabPickerWrap').hidden    = (newScope !== 'selected');
@@ -561,6 +606,25 @@ const Export = (() => {
     });
   }
 
+  function restoreUIState(state) {
+    const activeScopeId = state?.activeScope;
+    if (activeScopeId) {
+      const scopeIdMap = {
+        scopeWindow: 'window',
+        scopeAll: 'all',
+        scopeTabGroup: 'tabgroup',
+        scopeWindows: 'windows',
+        scopeSelected: 'selected',
+      };
+      _showScopeSub(scopeIdMap[activeScopeId] || 'window');
+    } else {
+      _showScopeSub(scope);
+    }
+
+    const activeFormatId = state?.activeFormat;
+    if (activeFormatId) format = activeFormatId.replace('fmt', '').toLowerCase();
+  }
+
   // ── Init ─────────────────────────────────────────────────
 
   async function init() {
@@ -588,6 +652,6 @@ const Export = (() => {
     await _renderFocusOptions();
   }
 
-  return { init, generate, copyToClipboard };
+  return { init, generate, copyToClipboard, restoreUIState };
 
 })();

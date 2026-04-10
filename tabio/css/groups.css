@@ -177,3 +177,36 @@
 [data-theme="dark"] .group-name-input   { color: var(--text-primary); }
 [data-theme="dark"] .win-tree-header    { background: var(--surface); }
 [data-theme="dark"] .focus-mode-select  { background: var(--surface); color: var(--text-primary); }
+
+/* ── Window tree: group name input ───────────────────── */
+.win-tree-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.win-group-name-input {
+  width: 120px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  color: var(--text-primary);
+  background: var(--bg);
+  outline: none;
+  transition: border-color .15s, width .2s;
+}
+
+.win-group-name-input:focus {
+  border-color: var(--border-focus);
+  width: 150px;
+}
+
+.win-group-name-input::placeholder { color: var(--text-hint); font-style: italic; }
+
+[data-theme="dark"] .win-group-name-input {
+  background: var(--surface);
+  color: var(--text-primary);
+}

@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tabCountBadge').textContent =
     `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
 
-  // Nav
+  registerPanels(['panelGroups', 'panelSettings']);
+  registerModeButtons(['modeGroups', 'modeSettings']);
+
+  // Nav wiring
   const navMap = {
     modeExport:    'export',
     modeImport:    'import',
@@ -19,10 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     modeAnalytics: 'analytics',
     modeSettings:  'settings',
   };
-
-  // Update ui.js panel/btn lists to include new panels
-  _allPanels.push('panelGroups','panelSettings');
-  _allModeBtns.push('modeGroups','modeSettings');
 
   Object.entries(navMap).forEach(([btnId, mode]) => {
     document.getElementById(btnId).addEventListener('click', async () => {
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Init modules
+  // Init modules (settings first — others may read Settings.get())
   await Settings.load();
   await Theme.init();
   await Export.init();
@@ -43,24 +42,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   Groups.init();
   Analytics.init();
 
+  // Restore persisted UI state
+  const savedState = await UIState.restore();
+  Export.restoreUIState(savedState);
+  Import.restoreUIState(savedState);
+
+  // Switch to the panel the user was on when they last closed the popup
+  const savedMode = savedState?.activeMode || 'export';
+  if (savedMode !== 'export') {
+    switchMode(savedMode);
+    // Trigger any lazy-render for that panel
+    if (savedMode === 'sessions')  await Sessions.render();
+    if (savedMode === 'groups')    await Groups.render();
+    if (savedMode === 'analytics') await Analytics.render();
+    if (savedMode === 'settings')  await Settings.render();
+  }
+
+  // Wire autosave listeners (after all modules init so elements exist)
+  UIState.wireAutosave();
+
   // Keyboard shortcuts
+  // Alt+E Export  Alt+I Import  Alt+S Sessions  Alt+G Groups/Generate
+  // Alt+A Stats   Alt+, Settings  Alt+Enter Generate  Alt+C Copy
+  // Alt+O Open tabs  Alt+U Undo  Alt+F Focus filter
+
   document.addEventListener('keydown', async e => {
     if (!e.altKey) return;
 
-    const exportVisible   = !document.getElementById('panelExport').hidden;
-    const importVisible   = !document.getElementById('panelImport').hidden;
+    const exportVisible = !document.getElementById('panelExport').hidden;
+    const importVisible = !document.getElementById('panelImport').hidden;
 
     switch (e.key.toLowerCase()) {
-      case 'e':        e.preventDefault(); document.getElementById('modeExport').click();    break;
-      case 'i':        e.preventDefault(); document.getElementById('modeImport').click();    break;
-      case 's':        e.preventDefault(); document.getElementById('modeSessions').click();  break;
+      case 'e': e.preventDefault(); document.getElementById('modeExport').click();    break;
+      case 'i': e.preventDefault(); document.getElementById('modeImport').click();    break;
+      case 's': e.preventDefault(); document.getElementById('modeSessions').click();  break;
       case 'g':
-        // Alt+G: generate on export, else go to Groups
-        if (exportVisible) { e.preventDefault(); await Export.generate(); }
-        else { e.preventDefault(); document.getElementById('modeGroups').click(); }
+        e.preventDefault();
+        if (exportVisible) await Export.generate();
+        else document.getElementById('modeGroups').click();
         break;
-      case 'a':        e.preventDefault(); document.getElementById('modeAnalytics').click(); break;
-      case ',':        e.preventDefault(); document.getElementById('modeSettings').click();  break;
+      case 'a': e.preventDefault(); document.getElementById('modeAnalytics').click(); break;
+      case ',': e.preventDefault(); document.getElementById('modeSettings').click();  break;
       case 'enter':
         e.preventDefault();
         if (exportVisible) await Export.generate();
