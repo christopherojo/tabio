@@ -88,7 +88,7 @@ const UIState = (() => {
 
   async function restore() {
     const state = await Storage.get(KEY);
-    if (!state) return null;
+    if (!state) return;
 
     // Restore toggles (update _toggleState in ui.js and visual class)
     if (state.toggles) {
@@ -130,10 +130,13 @@ const UIState = (() => {
       const ta = document.getElementById('importTextarea');
       if (ta) {
         ta.value = state.importText;
+        // Trigger import parsing to rebuild preview
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
 
-    return state;
+    // Return active mode so main.js can switch to it
+    return state.activeMode || 'export';
   }
 
   // ── Wire autosave listeners ──────────────────────────────

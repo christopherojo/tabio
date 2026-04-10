@@ -147,7 +147,11 @@ const Export = (() => {
 
   function _buildWindowOutput(windows, fmt) {
     return windows.map(win => {
-      const winHeader = _windowHeader(win.windowIndex, win.isCurrent, win.totalTabs, win.incognito);
+      // If window has a single tab group and no ungrouped tabs, use group name as header
+      const singleGroup = win.groups.length === 1 && win.ungroupedTabs.length === 0 ? win.groups[0] : null;
+      const winHeader = singleGroup
+        ? _groupHeader(singleGroup.title, singleGroup.color, win.totalTabs, win.incognito)
+        : _windowHeader(win.windowIndex, win.isCurrent, win.totalTabs, win.incognito);
       const body      = _buildGroupOutput(win.groups, win.ungroupedTabs, fmt, win.incognito);
       return [winHeader, body].filter(Boolean).join('\n');
     }).join('\n\n');
@@ -199,7 +203,9 @@ const Export = (() => {
     }
     if (scope === 'windows') {
       const allWindows = await TabsAPI.getWindowsWithGroups();
-      const selected   = allWindows.filter(w => selectedWinIds.has(w.windowId));
+      const selected   = selectedWinIds.size > 0
+        ? allWindows.filter(w => selectedWinIds.has(w.windowId))
+        : allWindows;
       return { type: 'windows', windows: selected };
     }
     return { type: 'flat', tabs: [] };
@@ -303,19 +309,16 @@ const Export = (() => {
     }
 
     // Init tree state
-    selectedWinIds.clear();
     windows.forEach(w => {
       if (!_winTree.has(w.windowId)) {
         _winTree.set(w.windowId, {
           expanded:       w.isCurrent,
           selectedTabIds: new Set(w.groups.flatMap(g => g.tabs).concat(w.ungroupedTabs).map(t => t.id)),
-          selected:       false,
+          selected:       true,
           groupName:      '',
         });
       }
-      if (_winTree.get(w.windowId)?.selected) {
-        selectedWinIds.add(w.windowId);
-      }
+      selectedWinIds.add(w.windowId);
     });
 
     _drawWindowTree(windows);
@@ -330,7 +333,11 @@ const Export = (() => {
       const allWinTabs = [...w.groups.flatMap(g => g.tabs), ...w.ungroupedTabs];
       const selCount = allWinTabs.filter(t => state.selectedTabIds.has(t.id)).length;
       const incogTag = w.incognito ? ` · 🕵` : '';
-      const winLabel = w.isCurrent ? `Window (current)${incogTag}` : `Window ${w.windowIndex}${incogTag}`;
+      // Use the group name as the window label when all tabs belong to one group
+      const singleGroup = w.groups.length === 1 && w.ungroupedTabs.length === 0 ? w.groups[0] : null;
+      const winLabel = singleGroup
+        ? `${singleGroup.title || 'Unnamed Group'}${w.isCurrent ? ' (current)' : ''}${incogTag}`
+        : w.isCurrent ? `Window (current)${incogTag}` : `Window ${w.windowIndex}${incogTag}`;
 
       const winRow = document.createElement('div');
       winRow.className = 'win-tree-row';
@@ -378,6 +385,11 @@ const Export = (() => {
       nameInput.addEventListener('keydown', async e => {
         if (e.key === 'Enter') { e.preventDefault(); await _createGroupFromWindow(w, state, windows); }
       });
+      nameInput.addEventListener('blur', async () => {
+        if (state.groupName && state.groupName.trim()) {
+          await _createGroupFromWindow(w, state, windows);
+        }
+      });
 
       winRow.appendChild(header);
 
@@ -421,7 +433,7 @@ const Export = (() => {
 
     const incogIcon = _isIncognito(tab) ? `<span class="tab-incog-icon" title="Incognito">🕵</span>` : '';
     const favicon   = (tab.favIconUrl && tab.favIconUrl.startsWith('http'))
-      ? `<img class="tab-favicon" src="${_esc(tab.favIconUrl)}">`
+      ? `<img class="tab-favicon" src="${_esc(tab.favIconUrl)}" onerror="this.style.display='none'">`
       : `<div class="tab-favicon-fallback"></div>`;
 
     row.innerHTML = `
@@ -433,9 +445,6 @@ const Export = (() => {
         <div class="tab-url">${_esc(tab.url || '')}</div>
       </div>
     `;
-
-    const faviconImg = row.querySelector('.tab-favicon');
-    if (faviconImg) faviconImg.onerror = () => faviconImg.replaceWith(_fallbackFavicon());
 
     row.addEventListener('click', () => {
       if (state.selectedTabIds.has(tab.id)) state.selectedTabIds.delete(tab.id);
@@ -576,7 +585,6 @@ const Export = (() => {
   // ── Scope sub-panel visibility ───────────────────────────
 
   function _showScopeSub(newScope) {
-    scope = newScope;
     document.getElementById('scopeSubTabGroup').hidden = (newScope !== 'tabgroup');
     document.getElementById('scopeSubWindows').hidden  = (newScope !== 'windows');
     document.getElementById('tabPickerWrap').hidden    = (newScope !== 'selected');
@@ -606,25 +614,6 @@ const Export = (() => {
     });
   }
 
-  function restoreUIState(state) {
-    const activeScopeId = state?.activeScope;
-    if (activeScopeId) {
-      const scopeIdMap = {
-        scopeWindow: 'window',
-        scopeAll: 'all',
-        scopeTabGroup: 'tabgroup',
-        scopeWindows: 'windows',
-        scopeSelected: 'selected',
-      };
-      _showScopeSub(scopeIdMap[activeScopeId] || 'window');
-    } else {
-      _showScopeSub(scope);
-    }
-
-    const activeFormatId = state?.activeFormat;
-    if (activeFormatId) format = activeFormatId.replace('fmt', '').toLowerCase();
-  }
-
   // ── Init ─────────────────────────────────────────────────
 
   async function init() {
@@ -652,6 +641,6 @@ const Export = (() => {
     await _renderFocusOptions();
   }
 
-  return { init, generate, copyToClipboard, restoreUIState };
+  return { init, generate, copyToClipboard };
 
 })();

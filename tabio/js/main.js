@@ -10,8 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tabCountBadge').textContent =
     `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
 
-  registerPanels(['panelGroups', 'panelSettings']);
-  registerModeButtons(['modeGroups', 'modeSettings']);
+  // Extend ui.js panel/btn arrays with new panels
+  _allPanels.push('panelGroups', 'panelSettings');
+  _allModeBtns.push('modeGroups', 'modeSettings');
 
   // Nav wiring
   const navMap = {
@@ -43,13 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   Analytics.init();
 
   // Restore persisted UI state
-  const savedState = await UIState.restore();
-  Export.restoreUIState(savedState);
-  Import.restoreUIState(savedState);
+  const savedMode = await UIState.restore();
 
   // Switch to the panel the user was on when they last closed the popup
-  const savedMode = savedState?.activeMode || 'export';
-  if (savedMode !== 'export') {
+  if (savedMode && savedMode !== 'export') {
     switchMode(savedMode);
     // Trigger any lazy-render for that panel
     if (savedMode === 'sessions')  await Sessions.render();

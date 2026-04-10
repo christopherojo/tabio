@@ -18,18 +18,6 @@ function showToast(message) {
 const _allPanels  = ['panelExport','panelImport','panelSessions','panelAnalytics'];
 const _allModeBtns= ['modeExport','modeImport','modeSessions','modeAnalytics'];
 
-function registerPanels(ids) {
-  ids.forEach(id => {
-    if (!_allPanels.includes(id)) _allPanels.push(id);
-  });
-}
-
-function registerModeButtons(ids) {
-  ids.forEach(id => {
-    if (!_allModeBtns.includes(id)) _allModeBtns.push(id);
-  });
-}
-
 function switchMode(mode) {
   _allModeBtns.forEach(id => {
     const btn = document.getElementById(id);

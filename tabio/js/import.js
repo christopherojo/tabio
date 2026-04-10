@@ -13,6 +13,7 @@ const Import = (() => {
   let _selectedUrls  = new Set();
   let _lastOpenedIds = [];          // tab IDs opened in last import (for undo)
   let _filterText    = '';
+  const CONFIRM_THRESHOLD = 10;    // show confirmation above this many tabs
 
   // ── URL scheme classification ────────────────────────────
 
@@ -55,7 +56,6 @@ const Import = (() => {
     const lines = text.split('\n');
     const sections = [];
     let current = { label: null, groupColor: null, urls: [] };
-    let currentWindowIncognito = false;
 
     const WINDOW_RE   = /^──\s+Window\s+\d+/;
     const GROUP_RE    = /^\[([A-Z]+)\]\s+(.+?)(?:\s+\(\d+\s+tabs?\))?$/;
@@ -63,18 +63,12 @@ const Import = (() => {
     const MARKDOWN_RE = /^#{1,3}\s+(.+)/;
     const UNGROUPED_RE= /^──\s+Ungrouped\s+──/;
 
-    const _isWindowHeader = line => WINDOW_RE.test(line) || /window\s+\d+/i.test(line);
-    const _isDomainHeader = line => DOMAIN_RE.test(line) || /^[^\w#\[]*[\w.-]+(?:\s+\(\d+\))[^\w]*$/.test(line);
-    const _isUngroupedHeader = line => UNGROUPED_RE.test(line) || /ungrouped/i.test(line);
-    const _cleanWindowLabel = line => line.replace(/^[^\w[]+/, '').replace(/[^\w)\]]+$/, '').trim();
-    const _cleanDomainLabel = line => line.replace(/^[^\w]+/, '').replace(/[^\w)]+$/, '').trim();
-
     const isHeader = line =>
-      _isWindowHeader(line)   ||
-      GROUP_RE.test(line)     ||
-      _isDomainHeader(line)   ||
-      MARKDOWN_RE.test(line)  ||
-      _isUngroupedHeader(line);
+      WINDOW_RE.test(line)   ||
+      GROUP_RE.test(line)    ||
+      DOMAIN_RE.test(line)   ||
+      MARKDOWN_RE.test(line) ||
+      UNGROUPED_RE.test(line);
 
     for (const raw of lines) {
       const line = raw.trim();
@@ -91,34 +85,21 @@ const Import = (() => {
         if (gm) {
           groupColor = gm[1].toLowerCase();
           label = gm[2].trim();
-        } else if (_isWindowHeader(line)) {
+        } else if (WINDOW_RE.test(line)) {
           label = line.replace(/^──\s*/, '').replace(/\s*──$/, '').trim();
-        } else if (_isDomainHeader(line)) {
+        } else if (DOMAIN_RE.test(line)) {
           label = line.replace(/^──\s*/, '').replace(/\s*──$/, '').trim();
-        } else if (_isUngroupedHeader(line)) {
+        } else if (UNGROUPED_RE.test(line)) {
           label = 'Ungrouped';
         } else {
           const mm = MARKDOWN_RE.exec(line);
           if (mm) label = mm[1].trim();
         }
 
-        if (_isWindowHeader(line)) label = _cleanWindowLabel(line);
-        if (_isDomainHeader(line)) label = _cleanDomainLabel(line);
-
         const isIncognitoSection =
           (line.includes('[Incognito]') || line.includes('🕵')) &&
-          (_isWindowHeader(line) || GROUP_RE.test(line));
+          (WINDOW_RE.test(line) || GROUP_RE.test(line));
         current = { label, groupColor, incognito: isIncognitoSection, urls: [] };
-if (_isWindowHeader(line)) {
-          current.incognito = /\[incognito\]/i.test(line) || line.includes('ðŸ•µ') || line.includes('🕵');
-        }
-        if (_isWindowHeader(line)) currentWindowIncognito = current.incognito;
-        if (GROUP_RE.test(line)) {
-          current.incognito = /^\[[A-Z]+\]\s+(?:\[Incognito\]\s+)?/.test(line);
-        }
-        if (!_isWindowHeader(line) && currentWindowIncognito && (_isUngroupedHeader(line) || _isDomainHeader(line) || GROUP_RE.test(line))) {
-          current.incognito = true;
-        }
       } else {
         // Try to extract URLs from this line
         const extracted = _extractUrlsFromLine(line);
@@ -414,19 +395,45 @@ if (_isWindowHeader(line)) {
       if (effectivePerWindow && sections.length > 1) {
         for (const sec of sections) {
           const secIncognito = useIncognito || sec.incognito || false;
-          const win = await _createWindow(sec.urls[0], secIncognito, false);
+          const win = await chrome.windows.create({ url: sec.urls[0], focused: false, ...(secIncognito && { incognito: true }) });
           newTabIds.push(...(win.tabs || []).map(t => t.id));
-          await _openRemainingUrlsInWindow(win.id, sec.urls.slice(1), batchSize, batchDelay, _origCreate, newTabIds);
+          for (let i = 1; i < sec.urls.length; i++) {
+            const t = await _origCreate({ windowId: win.id, url: sec.urls[i], active: false });
+            newTabIds.push(t.id);
+          }
         }
       } else {
         const allUrls = sections.flatMap(s => s.urls);
         if (useNewWin || useIncognito) {
-          const win = await _createWindow(allUrls[0], useIncognito, true);
+          const winOpts = { url: allUrls[0], focused: true };
+          if (useIncognito) winOpts.incognito = true;
+          const win = await chrome.windows.create(winOpts);
           newTabIds.push(...(win.tabs || []).map(t => t.id));
-          await _openRemainingUrlsInWindow(win.id, allUrls.slice(1), batchSize, batchDelay, _origCreate, newTabIds);
+          for (let i = 1; i < allUrls.length; i++) {
+            const t = await _origCreate({ windowId: win.id, url: allUrls[i], active: false });
+            newTabIds.push(t.id);
+          }
         } else if (batchSize > 0 || batchDelay > 0) {
-          const curWin = await TabsAPI.getCurrentWindow();
-          await _openRemainingUrlsInWindow(curWin.id, allUrls, batchSize, batchDelay, _origCreate, newTabIds);
+          // Fix: respect incognito toggle in batched mode
+          let targetWinId;
+          let batchUrls = [...allUrls];
+          if (useIncognito) {
+            const incogWin = await chrome.windows.create({ url: batchUrls[0], incognito: true, focused: true });
+            newTabIds.push(...(incogWin.tabs || []).map(t => t.id));
+            targetWinId = incogWin.id;
+            batchUrls = batchUrls.slice(1); // first URL already opened in new window
+          } else {
+            targetWinId = (await TabsAPI.getCurrentWindow()).id;
+          }
+          const size = batchSize > 0 ? batchSize : batchUrls.length;
+          for (let i = 0; i < batchUrls.length; i += size) {
+            for (const url of batchUrls.slice(i, i + size)) {
+              const t = await _origCreate({ windowId: targetWinId, url, active: false });
+              newTabIds.push(t.id);
+            }
+            if (i + size < batchUrls.length && batchDelay > 0)
+              await new Promise(r => setTimeout(r, batchDelay));
+          }
         } else {
           const curWin = await TabsAPI.getCurrentWindow();
           for (const url of allUrls) {
@@ -455,33 +462,6 @@ if (_isWindowHeader(line)) {
     }
   }
 
-  async function _createWindow(firstUrl, incognito, focused) {
-    try {
-      return await chrome.windows.create({ url: firstUrl, focused, ...(incognito && { incognito: true }) });
-    } catch (err) {
-      if (incognito) {
-        const msg = String(err?.message || err || '');
-        if (/incognito|allow in incognito/i.test(msg)) {
-          throw new Error('Allow Tabio in Incognito on chrome://extensions before opening incognito windows.');
-        }
-      }
-      throw err;
-    }
-  }
-
-  async function _openRemainingUrlsInWindow(windowId, urls, batchSize, batchDelay, createTab, newTabIds) {
-    const size = batchSize > 0 ? batchSize : urls.length;
-    for (let i = 0; i < urls.length; i += size) {
-      for (const url of urls.slice(i, i + size)) {
-        const t = await createTab({ windowId, url, active: false });
-        newTabIds.push(t.id);
-      }
-      if (i + size < urls.length && batchDelay > 0) {
-        await new Promise(r => setTimeout(r, batchDelay));
-      }
-    }
-  }
-
   async function openTabs() {
     const text = document.getElementById('importTextarea').value.trim();
     if (!text && _sections.length === 0) { showToast('Paste some text first!'); return; }
@@ -496,25 +476,21 @@ if (_isWindowHeader(line)) {
       if (perWindow && rawSections.length > 1) {
         toOpen = rawSections.map(s => ({
           label: s.label,
-          incognito: !!s.incognito,
           urls: s.urls.filter(u => selectedSet.has(u) && isOpenable(u)),
         })).filter(s => s.urls.length > 0);
       } else {
         const urls = [...selectedSet].filter(isOpenable);
-        const incognito = rawSections.some(s => s.incognito && s.urls.some(u => selectedSet.has(u) && isOpenable(u)));
-        toOpen = urls.length > 0 ? [{ label: null, incognito, urls }] : [];
+        toOpen = urls.length > 0 ? [{ label: null, urls }] : [];
       }
     } else {
       if (perWindow && rawSections.length > 1) {
         toOpen = rawSections.map(s => ({
           label: s.label,
-          incognito: !!s.incognito,
           urls: s.urls.filter(isOpenable),
         })).filter(s => s.urls.length > 0);
       } else {
         const urls = rawSections.flatMap(s => s.urls).filter(isOpenable);
-        const incognito = rawSections.some(s => s.incognito && s.urls.some(isOpenable));
-        toOpen = urls.length > 0 ? [{ label: null, incognito, urls }] : [];
+        toOpen = urls.length > 0 ? [{ label: null, urls }] : [];
       }
     }
 
@@ -522,8 +498,7 @@ if (_isWindowHeader(line)) {
 
     const total = toOpen.reduce((n,s) => n+s.urls.length, 0);
 
-    const confirmThreshold = Settings.get('confirmThreshold') || 10;
-    if (total >= confirmThreshold) {
+    if (total >= CONFIRM_THRESHOLD) {
       _showConfirmBar(total, () => _doOpen(toOpen));
     } else {
       await _doOpen(toOpen);
@@ -552,15 +527,6 @@ if (_isWindowHeader(line)) {
     const filterInput = document.getElementById('previewFilterInput');
     if (filterInput) filterInput.value = '';
     _renderPreview();
-  }
-
-  function restoreUIState(state) {
-    const text = state?.importText || document.getElementById('importTextarea')?.value || '';
-    const ta = document.getElementById('importTextarea');
-    if (!ta || !text) return;
-    ta.value = text;
-    document.getElementById('charCount').textContent = `${text.length} chars`;
-    _ingestText(text);
   }
 
   // ── Helpers ──────────────────────────────────────────────
@@ -642,11 +608,6 @@ if (_isWindowHeader(line)) {
     document.getElementById('btnUndo').addEventListener('click', undoLastImport);
   }
 
-  return { init, parseUrls, parseSections, undoLastImport, restoreUIState };
+  return { init, parseUrls, parseSections, undoLastImport };
 
 })();
-
-
-
-
-

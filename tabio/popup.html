@@ -50,27 +50,27 @@
 
   <!-- ── Nav ────────────────────────────────────────────── -->
   <nav class="mode-toggle" role="tablist">
-    <button class="mode-btn active" id="modeExport" role="tab" data-panel="panelExport">
+    <button class="mode-btn active" id="modeExport" role="tab" data-panel="panelExport" title="Export (Alt+E)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="13 7 10 4 7 7"/><line x1="10" y1="4" x2="10" y2="13"/></svg>
       Export
     </button>
-    <button class="mode-btn" id="modeImport" role="tab" data-panel="panelImport">
+    <button class="mode-btn" id="modeImport" role="tab" data-panel="panelImport" title="Import (Alt+I)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="7 9 10 12 13 9"/><line x1="10" y1="12" x2="10" y2="3"/></svg>
       Import
     </button>
-    <button class="mode-btn" id="modeSessions" role="tab" data-panel="panelSessions">
+    <button class="mode-btn" id="modeSessions" role="tab" data-panel="panelSessions" title="Sessions (Alt+S)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="6" y1="3" x2="6" y2="7"/><line x1="14" y1="3" x2="14" y2="7"/></svg>
       Sessions
     </button>
-    <button class="mode-btn" id="modeGroups" role="tab" data-panel="panelGroups">
+    <button class="mode-btn" id="modeGroups" role="tab" data-panel="panelGroups" title="Groups (Alt+G)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="7" height="12" rx="2"/><rect x="11" y="4" width="7" height="12" rx="2"/></svg>
       Groups
     </button>
-    <button class="mode-btn" id="modeAnalytics" role="tab" data-panel="panelAnalytics">
+    <button class="mode-btn" id="modeAnalytics" role="tab" data-panel="panelAnalytics" title="Stats (Alt+A)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="17" x2="2" y2="17"/><polyline points="5 10 5 17"/><polyline points="9 6 9 17"/><polyline points="13 13 13 17"/><polyline points="17 3 17 17"/></svg>
       Stats
     </button>
-    <button class="mode-btn" id="modeSettings" role="tab" data-panel="panelSettings">
+    <button class="mode-btn" id="modeSettings" role="tab" data-panel="panelSettings" title="Settings (Alt+,)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.42 1.42M15.36 15.36l1.42 1.42M3.22 16.78l1.42-1.42M15.36 4.64l1.42-1.42"/></svg>
       Settings
     </button>
@@ -157,11 +157,11 @@
 
     <!-- Actions -->
     <div class="btn-row">
-      <button class="btn btn-primary" id="btnGenerate">
+      <button class="btn btn-primary" id="btnGenerate" title="Generate export (Alt+Enter)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 16 12 13 19 7 1 4 12 0 12"/></svg>
         Generate
       </button>
-      <button class="btn btn-secondary" id="btnCopy">
+      <button class="btn btn-secondary" id="btnCopy" title="Copy to clipboard (Alt+C)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M4 12H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"/></svg>
         Copy
       </button>
@@ -265,7 +265,7 @@
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" id="btnOpenTabs">
+      <button class="btn btn-primary" id="btnOpenTabs" title="Open tabs (Alt+O)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 11v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><polyline points="12 2 18 2 18 8"/><line x1="8" y1="12" x2="18" y2="2"/></svg>
         Open Tabs
       </button>
@@ -446,7 +446,7 @@
     </div>
 
     <div class="settings-about">
-      Tabio v1.5.2 · All data stored locally · No tracking
+      Tabio v1.5.1 · All data stored locally · No tracking
     </div>
   </section>
 
