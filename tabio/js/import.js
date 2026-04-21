@@ -55,7 +55,8 @@ const Import = (() => {
   function parseSections(text) {
     const lines = text.split('\n');
     const sections = [];
-    let current = { label: null, groupColor: null, urls: [] };
+    let current = { label: null, groupColor: null, incognito: false, urls: [] };
+    let currentWindowIncognito = false;
 
     const WINDOW_RE   = /^──\s+Window\s+\d+/;
     const GROUP_RE    = /^\[([A-Z]+)\]\s+(.+?)(?:\s+\(\d+\s+tabs?\))?$/;
@@ -63,12 +64,17 @@ const Import = (() => {
     const MARKDOWN_RE = /^#{1,3}\s+(.+)/;
     const UNGROUPED_RE= /^──\s+Ungrouped\s+──/;
 
+    const isWindowHeader = line => WINDOW_RE.test(line) || /window\s+\d+/i.test(line);
+    const isDomainHeader = line => DOMAIN_RE.test(line) || /^[^\w#\[]*[\w.-]+(?:\s+\(\d+\))[^\w]*$/.test(line);
+    const isUngroupedHeader = line => UNGROUPED_RE.test(line) || /ungrouped/i.test(line);
+    const hasIncognitoMarker = line => /\[incognito\]/i.test(line) || line.includes('??');
+
     const isHeader = line =>
-      WINDOW_RE.test(line)   ||
+      isWindowHeader(line)   ||
       GROUP_RE.test(line)    ||
-      DOMAIN_RE.test(line)   ||
+      isDomainHeader(line)   ||
       MARKDOWN_RE.test(line) ||
-      UNGROUPED_RE.test(line);
+      isUngroupedHeader(line);
 
     for (const raw of lines) {
       const line = raw.trim();
@@ -85,20 +91,23 @@ const Import = (() => {
         if (gm) {
           groupColor = gm[1].toLowerCase();
           label = gm[2].trim();
-        } else if (WINDOW_RE.test(line)) {
+        } else if (isWindowHeader(line)) {
           label = line.replace(/^──\s*/, '').replace(/\s*──$/, '').trim();
-        } else if (DOMAIN_RE.test(line)) {
+        } else if (isDomainHeader(line)) {
           label = line.replace(/^──\s*/, '').replace(/\s*──$/, '').trim();
-        } else if (UNGROUPED_RE.test(line)) {
+        } else if (isUngroupedHeader(line)) {
           label = 'Ungrouped';
         } else {
           const mm = MARKDOWN_RE.exec(line);
           if (mm) label = mm[1].trim();
         }
 
+        if (isWindowHeader(line)) {
+          currentWindowIncognito = hasIncognitoMarker(line);
+        }
         const isIncognitoSection =
-          (line.includes('[Incognito]') || line.includes('🕵')) &&
-          (WINDOW_RE.test(line) || GROUP_RE.test(line));
+          (hasIncognitoMarker(line) && (isWindowHeader(line) || GROUP_RE.test(line))) ||
+          (!isWindowHeader(line) && currentWindowIncognito);
         current = { label, groupColor, incognito: isIncognitoSection, urls: [] };
       } else {
         // Try to extract URLs from this line
@@ -389,18 +398,21 @@ const Import = (() => {
 
       // Mixed mode: open each section in its own window, respecting incognito flag
       // This triggers automatically when mixed-mode is on and sections have different incognito states
-      const hasMixedIncognito = useMixedMode && sections.some(s => s.incognito) && sections.some(s => !s.incognito);
-      const effectivePerWindow = perWindow || hasMixedIncognito;
+      const hasMixedIncognito = sections.some(s => s.incognito) && sections.some(s => !s.incognito);
+      const effectivePerWindow = perWindow || useMixedMode || hasMixedIncognito;
 
       if (effectivePerWindow && sections.length > 1) {
         for (const sec of sections) {
           const secIncognito = useIncognito || sec.incognito || false;
           const win = await chrome.windows.create({ url: sec.urls[0], focused: false, ...(secIncognito && { incognito: true }) });
           newTabIds.push(...(win.tabs || []).map(t => t.id));
+          const sectionTabIds = [...(win.tabs || []).map(t => t.id)];
           for (let i = 1; i < sec.urls.length; i++) {
             const t = await _origCreate({ windowId: win.id, url: sec.urls[i], active: false });
             newTabIds.push(t.id);
+            sectionTabIds.push(t.id);
           }
+          await _nameImportedWindow(sectionTabIds, sec.label);
         }
       } else {
         const allUrls = sections.flatMap(s => s.urls);
@@ -409,10 +421,13 @@ const Import = (() => {
           if (useIncognito) winOpts.incognito = true;
           const win = await chrome.windows.create(winOpts);
           newTabIds.push(...(win.tabs || []).map(t => t.id));
+          const sectionTabIds = [...(win.tabs || []).map(t => t.id)];
           for (let i = 1; i < allUrls.length; i++) {
             const t = await _origCreate({ windowId: win.id, url: allUrls[i], active: false });
             newTabIds.push(t.id);
+            sectionTabIds.push(t.id);
           }
+          if (sections.length === 1) await _nameImportedWindow(sectionTabIds, sections[0].label);
         } else if (batchSize > 0 || batchDelay > 0) {
           // Fix: respect incognito toggle in batched mode
           let targetWinId;
@@ -462,35 +477,57 @@ const Import = (() => {
     }
   }
 
+  async function _nameImportedWindow(tabIds, label) {
+    const name = _importWindowName(label);
+    if (!name || tabIds.length === 0) return;
+    try {
+      const groupId = await chrome.tabs.group({ tabIds });
+      await chrome.tabGroups.update(groupId, { title: name, color: 'blue' });
+    } catch (err) {
+      console.warn('[Tabio] Could not preserve imported window name:', err);
+    }
+  }
+
+  function _importWindowName(label) {
+    const name = (label || '').replace(/\[Incognito\]/gi, '').replace(/\(\d+\s+tabs?\)/i, '').trim();
+    if (!name || /^Window\s+\d+/i.test(name) || /^Ungrouped$/i.test(name)) return null;
+    return name.slice(0, 80);
+  }
+
   async function openTabs() {
     const text = document.getElementById('importTextarea').value.trim();
     if (!text && _sections.length === 0) { showToast('Paste some text first!'); return; }
 
     const rawSections = _sections.length > 0 ? _sections : parseSections(text);
     const perWindow   = getToggle('togglePerWindow');
+    const hasMixedIncognito = rawSections.some(s => s.incognito) && rawSections.some(s => !s.incognito);
 
     // Build sections to open
     let toOpen;
     if (_selectedUrls.size > 0) {
       const selectedSet = _selectedUrls;
-      if (perWindow && rawSections.length > 1) {
+      if ((perWindow || hasMixedIncognito) && rawSections.length > 1) {
         toOpen = rawSections.map(s => ({
           label: s.label,
+          incognito: !!s.incognito,
           urls: s.urls.filter(u => selectedSet.has(u) && isOpenable(u)),
         })).filter(s => s.urls.length > 0);
       } else {
         const urls = [...selectedSet].filter(isOpenable);
-        toOpen = urls.length > 0 ? [{ label: null, urls }] : [];
+        const incognito = rawSections.some(s => s.incognito && s.urls.some(u => selectedSet.has(u) && isOpenable(u)));
+        toOpen = urls.length > 0 ? [{ label: rawSections.length === 1 ? rawSections[0].label : null, incognito, urls }] : [];
       }
     } else {
-      if (perWindow && rawSections.length > 1) {
+      if ((perWindow || hasMixedIncognito) && rawSections.length > 1) {
         toOpen = rawSections.map(s => ({
           label: s.label,
+          incognito: !!s.incognito,
           urls: s.urls.filter(isOpenable),
         })).filter(s => s.urls.length > 0);
       } else {
         const urls = rawSections.flatMap(s => s.urls).filter(isOpenable);
-        toOpen = urls.length > 0 ? [{ label: null, urls }] : [];
+        const incognito = rawSections.some(s => s.incognito && s.urls.some(isOpenable));
+        toOpen = urls.length > 0 ? [{ label: rawSections.length === 1 ? rawSections[0].label : null, incognito, urls }] : [];
       }
     }
 

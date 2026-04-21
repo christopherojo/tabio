@@ -91,8 +91,9 @@ const Export = (() => {
     return `${dot}${priv} ${name || 'Unnamed Group'} (${count} tab${count !== 1 ? 's' : ''})`;
   }
 
-  function _windowHeader(windowIndex, isCurrent, tabCount, incognito) {
-    const label   = isCurrent ? `Window ${windowIndex} (current)` : `Window ${windowIndex}`;
+  function _windowHeader(windowIndex, isCurrent, tabCount, incognito, customName = null) {
+    const baseLabel = customName || `Window ${windowIndex}`;
+    const label   = isCurrent ? `${baseLabel} (current)` : baseLabel;
     const privTag = incognito ? ` · ${_incognitoLabel()}` : '';
     return `── ${label}${privTag} · ${tabCount} tab${tabCount !== 1 ? 's' : ''} ──`;
   }
@@ -149,9 +150,13 @@ const Export = (() => {
     return windows.map(win => {
       // If window has a single tab group and no ungrouped tabs, use group name as header
       const singleGroup = win.groups.length === 1 && win.ungroupedTabs.length === 0 ? win.groups[0] : null;
-      const winHeader = singleGroup
-        ? _groupHeader(singleGroup.title, singleGroup.color, win.totalTabs, win.incognito)
-        : _windowHeader(win.windowIndex, win.isCurrent, win.totalTabs, win.incognito);
+      const winHeader = _windowHeader(
+        win.windowIndex,
+        win.isCurrent,
+        win.totalTabs,
+        win.incognito,
+        singleGroup ? (singleGroup.title || 'Unnamed Group') : null
+      );
       const body      = _buildGroupOutput(win.groups, win.ungroupedTabs, fmt, win.incognito);
       return [winHeader, body].filter(Boolean).join('\n');
     }).join('\n\n');

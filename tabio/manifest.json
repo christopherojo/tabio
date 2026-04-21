@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabio",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Export tabs to text. Import text to tabs. Save sessions. Clean links.",
   "permissions": [
     "tabs", "windows", "tabGroups",

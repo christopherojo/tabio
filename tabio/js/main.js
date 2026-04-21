@@ -10,9 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tabCountBadge').textContent =
     `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
 
-  // Extend ui.js panel/btn arrays with new panels
-  _allPanels.push('panelGroups', 'panelSettings');
-  _allModeBtns.push('modeGroups', 'modeSettings');
+  registerPanels(['panelGroups', 'panelSettings']);
+  registerModeButtons(['modeGroups', 'modeSettings']);
 
   // Nav wiring
   const navMap = {
@@ -36,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Init modules (settings first — others may read Settings.get())
   await Settings.load();
+  await Settings.render();
   await Theme.init();
   await Export.init();
   Import.init();
